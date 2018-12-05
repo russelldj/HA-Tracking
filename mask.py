@@ -1,9 +1,10 @@
 import numpy as np
 import cv2
 import tools
-from pycocotools import mask as MaskUtil
+#from pycocotools import mask as MaskUtil
 import h5py
 import json
+import pdb
 
 """
 this is a collection of helper functions which help with manipulating maskss
@@ -24,7 +25,6 @@ def bbox_to_contour(bbox):
     assert len(bbox) == 4
     tlbr = tools.ltwh_to_tlbr(bbox)
     top, left, bottom, right = [int(x) for x in tlbr]
-    print(top, left, bottom, right)
     assert bottom > top and right > left
     contour = [[ [[left, bottom]], [[right, bottom]], [[right, top]], [[left, top]]]]
     return contour
@@ -48,8 +48,18 @@ def extract_masks_one_frame(h5_filename, ind, threshold=0.5, target_class = 1):
     contours = data["contours"]
     boxes    = data["boxes"]
     classes  = data["classes"]
-    confs, contours, classes = zip(*((box[4], contour, clas) for box, contour, clas in zip(boxes, contours, classes) if box[4] > threshold)) # box[4] is the conf 
-    output = zip(*((conf, contour, clas) for conf, contour, clas in zip(confs, contours, classes) if (target_class is None or clas==target_class))) # box[4] is the conf 
+
+    # first filtering op
+    output = zip(*((box[4], contour, clas) for box, contour, clas in zip(boxes, contours, classes) if box[4] > threshold)) # box[4] is the conf 
+    list_output = list(output)
+    if len(list_output) == 3:
+        confs, contours, classes = list_output
+    else: 
+        confs, contours, classes = [], [], []
+    
+    # and second
+    output = zip(*[(conf, contour, clas) for conf, contour, clas in zip(confs, contours, classes) if (target_class is None or clas==target_class)]) # box[4] is the conf 
+
     list_output = list(output)
     if len(list_output) == 3:
         confs, contours, classes = list_output
@@ -57,11 +67,10 @@ def extract_masks_one_frame(h5_filename, ind, threshold=0.5, target_class = 1):
         confs, contours, classes = [], [], []
     contours = list(contours)
 
-    print(len(contours))
     assert type(contours) == list, type(contours)
     return contours
 
-def draw_mask(image, contours, color=(0,0,0)):
+def draw_mask(image, contours, IDs, color=(0,0,0)):
     """
     >>> contours = extract_masks_one_frame("/home/drussel1/data/EIMP/EIMP_mask-RCNN_detections/Injection_Preparation.mp4.h5", 1)
     ... import cv2
@@ -69,9 +78,25 @@ def draw_mask(image, contours, color=(0,0,0)):
     ... img = cv2.imread("/home/drussel1/data/EIMP/frames/000001.jpeg") 
     ... draw_mask(img, contours)
     """
+    assert len(IDs) == len(contours)
     pts = [[np.asarray(c_, dtype = int) for c_ in c] for c in contours] 
+    overlay_image = np.zeros_like(image)
+    np.random.seed(0)
+    colors = [tuple(np.random.randint(0, 255, (3,)).tolist()) for _ in range(10000)]
 
-    for pt in pts:
-        image = cv2.fillPoly(image, pts=pt, color=(255,255,255))
-    cv2.imwrite("mask.png", image)
-    cv2.waitKey(0)
+    for i, pt in enumerate(pts):
+        overlay_image = cv2.fillPoly(overlay_image, pts=pt, color=colors[IDs[i]])
+    
+    image = cv2.addWeighted(image,0.7,overlay_image,0.3,0)
+    return image
+
+def slow_mask_IOU(contour1, contour2, image_shape=(720,1280)):
+    contour1 = [np.asarray(c_, dtype = int) for c_ in contour1]
+    contour2 = [np.asarray(c_, dtype = int) for c_ in contour2]
+    
+    mask1 = cv2.fillPoly(np.zeros((image_shape)), pts=contour1, color=1)
+    mask2 = cv2.fillPoly(np.zeros((image_shape)), pts=contour2, color=1)
+    overlap = sum(sum(np.multiply(mask1, mask2)))
+    total = sum(sum(mask1)) + sum(sum(mask2)) - overlap 
+    IOU = float(overlap) / total
+    return IOU
