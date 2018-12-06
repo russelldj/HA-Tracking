@@ -70,6 +70,16 @@ def extract_masks_one_frame(h5_filename, ind, threshold=0.5, target_class = 1):
     assert type(contours) == list, type(contours)
     return contours
 
+def contour_to_biggest_mask(image_shape, contours):
+    pts = [[np.asarray(c_, dtype = int) for c_ in c] for c in contours] 
+    mask  = np.zeros(image_shape)
+    for i, pt in enumerate(pts):
+        for sec in pt:
+            temp_mask = cv2.fillPoly(np.zeros(image_shape), pts=[sec], color=1)
+            if sum(sum(temp_mask)) > sum(sum(mask)):
+                mask = temp_mask
+    return mask
+
 def draw_mask(image, contours, IDs, color=(0,0,0)):
     """
     >>> contours = extract_masks_one_frame("/home/drussel1/data/EIMP/EIMP_mask-RCNN_detections/Injection_Preparation.mp4.h5", 1)
