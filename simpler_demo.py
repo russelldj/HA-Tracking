@@ -22,19 +22,24 @@ import pdb
 #net = SiamRPNvot()
 #net.load_state_dict(torch.load(join(realpath(dirname(__file__)), 'SiamRPNVOT.model')))
 
-if True:
+WHICH_ONE=0
+
+if WHICH_ONE==0:
     VIDEO_FILE = "/home/drussel1/data/EIMP/videos/Injection_Preparation.mp4" 
     H5_FILE = "/home/drussel1/data/EIMP/EIMP_mask-RCNN_detections/Injection_Preparation.mp4.h5"
-    START_FRAME = 300
-if False:
+    START_FRAME = 600
+if WHICH_ONE==1:
     VIDEO_FILE = "/home/drussel1/data/ADL/ADL1619_videos/P_18.MP4"
     H5_FILE = "/home/drussel1/data/ADL/new_mask_outputs/dataset_per_frame/P_18.MP4.h5" 
     START_FRAME = 18000 
-if False:
+if WHICH_ONE==2:
     VIDEO_FILE = "/home/drussel1/data/EIMP/videos/Oxygen_Saturation-YzkxXmT4neg.mp4"
     H5_FILE = "/home/drussel1/data/EIMP/new-EIMP-mask-RCNN-detections/Oxygen_Saturation-YzkxXmT4neg.mp4.h5" 
     START_FRAME = 300
-
+if WHICH_ONE==3:
+    VIDEO_FILE = "/home/drussel1/data/EIMP/videos/Blood_Glucose-6Q-UJJmTMQA.mp4"
+    H5_FILE = "/home/drussel1/data/EIMP/new-EIMP-mask-RCNN-detections/Blood_Glucose-6Q-UJJmTMQA.mp4.h5" 
+    START_FRAME = 496
 
 LOST_THRESH = 0.8
 OUTPUT_FILENAME = "video.avi" 
@@ -72,7 +77,7 @@ while ok:
     cv2.waitKey(1)
     ok, frame = video_reader.read()
     tic = cv2.getTickCount()
-    ltwh, score = tracker.predict(frame)  # track
+    ltwh, score = tracker.predict(frame)  # The order of the outputs will need to get switched
     print(score)
     toc += cv2.getTickCount()-tic
     frame_num += 1
