@@ -39,14 +39,17 @@ image_files = sorted(glob.glob('./bag/*.jpg'))
 #init_rbox = [334.02,128.36,438.19,188.78,396.39,260.83,292.23,200.41]
 #[cx, cy, w, h] = get_axis_aligned_bbox(init_rbox)
 
-if True:
+which_one = 0 
+
+if which_one == 0:
     VIDEO_FILE = "/home/drussel1/data/EIMP/videos/Injection_Preparation.mp4" 
     H5_FILE = "/home/drussel1/data/EIMP/EIMP_mask-RCNN_detections/Injection_Preparation.mp4.h5"
-if False:
+    START_FRAME = 600 
+if which_one == 1:
     VIDEO_FILE = "/home/drussel1/data/ADL/ADL1619_videos/P_18.MP4"
     H5_FILE = "/home/drussel1/data/ADL/new_mask_outputs/dataset_per_frame/P_18.MP4.h5" 
     START_FRAME = 18000 
-if True:
+if which_one == 2:
     VIDEO_FILE = "/home/drussel1/data/EIMP/videos/Oxygen_Saturation-YzkxXmT4neg.mp4"
     H5_FILE = "/home/drussel1/data/EIMP/new-EIMP-mask-RCNN-detections/Oxygen_Saturation-YzkxXmT4neg.mp4.h5" 
     START_FRAME = 1

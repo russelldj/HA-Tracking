@@ -5,6 +5,7 @@ import sys
 import matplotlib.pyplot as plt
 from scipy import stats
 import pylab as pl
+import copy
 
 from roipoly.roipoly import roipoly
 
@@ -28,6 +29,36 @@ class FlowTracker(object):
         OUTPUT_FILENAME = "output.avi"
         print(int(width), int(height))
         self.video_writer = cv2.VideoWriter(OUTPUT_FILENAME, fourcc, FPS, (int(width), int(height)))
+
+    @staticmethod
+    def predict_movement(flow_prefix, ltrb_bbox):
+        flow = FlowTracker.load_flow(flow_prefix)
+        updated_bbox = FlowTracker.static_box_predict(flow, ltrb_bbox, scale_factor=1.0)
+        return updated_bbox 
+
+    @staticmethod
+    def static_box_predict(flow, bbox, scale_factor=1.0):
+        def fint(float_):
+            return int(np.floor(float_))
+
+        tracked_region = flow[fint(bbox[1]):fint(bbox[3]),fint(bbox[0]):fint(bbox[2])]
+        x_size = fint(bbox[2]) - fint(bbox[0])
+        y_size = fint(bbox[3]) - fint(bbox[1])
+        
+        use_mode = True
+
+        if use_mode:
+            x_ave = stats.mode(tracked_region[...,0].astype(int), axis=None).mode[0] * scale_factor 
+            y_ave = stats.mode(tracked_region[...,1].astype(int), axis=None).mode[0] * scale_factor
+        else:  
+            x_ave = np.average(tracked_region[...,0]) * scale_factor
+            y_ave = np.average(tracked_region[...,1]) * scale_factor
+        output_bbox = copy.copy(bbox)
+        output_bbox[0] += x_ave #- x_ceoffs[0] * x_size / 2.0 
+        output_bbox[2] += x_ave #+ x_ceoffs[0] * x_size / 2.0
+        output_bbox[1] += y_ave #- y_ceoffs[0] * y_size / 2.0
+        output_bbox[3] += y_ave #+ y_ceoffs[0] * y_size / 2.0
+        return output_bbox
 
     def run(self):
         self.bbox = self.pick_location
@@ -96,9 +127,9 @@ class FlowTracker(object):
         try:  
             x_ceoffs = np.polyfit(np.arange(x_size), tracked_region[int(y_size / 2), :, 0], 1)
             y_ceoffs = np.polyfit(np.arange(y_size), tracked_region[:, int(x_size/ 2), 1], 1)
-        except ValueError:
+        except valueerror:
             self.video_writer.release()
-            print("The box went out of frame")
+            print("the box went out of frame")
             exit()
         print("x_ave: {}, y_ave: {}".format(x_ave, y_ave))
         print("xslope: {}, yslope: {}".format(x_ceoffs[0] * x_size, y_ceoffs[0] * y_size))
@@ -139,8 +170,8 @@ class FlowTracker(object):
         ret, self.image = self.video_reader.read()
         self.frame_idx += 1
 
-
-    def load_flow(self, flow_prefix):
+    @staticmethod
+    def load_flow(flow_prefix):
                 # there might be a missing scale factor
         x_flow = cv2.imread("{}_x.jpg".format(flow_prefix)) / 255.0 # they are both saved in the range 0-255
         y_flow = cv2.imread("{}_y.jpg".format(flow_prefix)) / 255.0
@@ -242,24 +273,25 @@ class FlowTracker(object):
             cv2.imshow("frame", self.image)
             cv2.waitKey(10)
 
-FLOW_DIR = "/home/drussel1/data/EIMP/flow"
-VIDEO_FILE = "/home/drussel1/data/EIMP/videos/Injection_Preparation.mp4"
-
-if len(sys.argv) > 2:
-    flow_tracker = FlowTracker(VIDEO_FILE, FLOW_DIR, int(sys.argv[1]), False)
-elif len(sys.argv) > 1:
-    flow_tracker = FlowTracker(VIDEO_FILE, FLOW_DIR, int(sys.argv[1]))
-else:
-    flow_tracker = FlowTracker(VIDEO_FILE, FLOW_DIR)
-
-#flow_tracker.standard_tracking()
-
-flow_tracker.pick_location()
-#flow_tracker.set_location_ltrb([594, 336, 676, 508])
-while True:
-    flow_tracker.load_next()
-    flow_tracker.predict()
-    #flow_tracker.show_track()
-    flow_tracker.add_track()
-    #flow_tracker.show_flow()
-    flow_tracker.show_hist_and_image()
+if __name__ == "__main__":
+    FLOW_DIR = "/home/drussel1/data/EIMP/flow"
+    VIDEO_FILE = "/home/drussel1/data/EIMP/videos/Injection_Preparation.mp4"
+    
+    if len(sys.argv) > 2:
+        flow_tracker = FlowTracker(VIDEO_FILE, FLOW_DIR, int(sys.argv[1]), False)
+    elif len(sys.argv) > 1:
+        flow_tracker = FlowTracker(VIDEO_FILE, FLOW_DIR, int(sys.argv[1]))
+    else:
+        flow_tracker = FlowTracker(VIDEO_FILE, FLOW_DIR)
+    
+    #flow_tracker.standard_tracking()
+    
+    flow_tracker.pick_location()
+    #flow_tracker.set_location_ltrb([594, 336, 676, 508])
+    while True:
+        flow_tracker.load_next()
+        flow_tracker.predict()
+        #flow_tracker.show_track()
+        flow_tracker.add_track()
+        #flow_tracker.show_flow()
+        flow_tracker.show_hist_and_image()

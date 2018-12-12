@@ -60,14 +60,19 @@ ltwh = list(cv2.selectROI(frame))
 hand_box = [float(i) for i in ltwh]
 track_1_diff_xy = [0.0, 0.0]
 cv2.destroyAllWindows()
-tracker = SiamRPN_tracker(frame, ltwh) 
+USE_MOSSE=True
+if USE_MOSSE:
+    tracker = cv2.TrackerMedianFlow_create()
+    tracker.init(frame, ltwh)
+else:
+    tracker = SiamRPN_tracker(frame, ltwh) 
 # tracking and visualization
 toc = 0
 frame_num = START_FRAME
 score = 1
 next_ID = 0
-
-os.system("/bin/rm chips/*")
+if len(glob.glob("chips/*")) > 0:
+    os.system("/bin/rm chips/*")
 
 while ok:
     cv2.rectangle(frame, (ltwh[0], ltwh[1]), (ltwh[0] + ltwh[2], ltwh[1] + ltwh[3]), (255,0,0) , 3)
@@ -77,9 +82,14 @@ while ok:
     cv2.waitKey(1)
     ok, frame = video_reader.read()
     tic = cv2.getTickCount()
-    ltwh, score = tracker.predict(frame)  # The order of the outputs will need to get switched
+    if USE_MOSSE:
+        pdb.set_trace()
+        ok, ltwh = tracker.update(frame)
+        score = int(ok)
+    else:
+        ltwh, score = tracker.predict(frame)  # The order of the outputs will need to get switched
     print(score)
     toc += cv2.getTickCount()-tic
     frame_num += 1
 
-print('Tracking Speed {:.1f}fps'.format((len(image_files)-1)/(toc/cv2.getTickFrequency())))
+#print('Tracking Speed {:.1f}fps'.format((len(image_files)-1)/(toc/cv2.getTickFrequency())))
