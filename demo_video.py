@@ -39,14 +39,15 @@ image_files = sorted(glob.glob('./bag/*.jpg'))
 #init_rbox = [334.02,128.36,438.19,188.78,396.39,260.83,292.23,200.41]
 #[cx, cy, w, h] = get_axis_aligned_bbox(init_rbox)
 
-if True:
+if False:
     VIDEO_FILE = "/home/drussel1/data/EIMP/videos/Injection_Preparation.mp4" 
     H5_FILE = "/home/drussel1/data/EIMP/EIMP_mask-RCNN_detections/Injection_Preparation.mp4.h5"
-if False:
+    START_FRAME = 200
+if True:
     VIDEO_FILE = "/home/drussel1/data/ADL/ADL1619_videos/P_18.MP4"
     H5_FILE = "/home/drussel1/data/ADL/new_mask_outputs/dataset_per_frame/P_18.MP4.h5" 
-    START_FRAME = 18000 
-if True:
+    START_FRAME = 18020 
+if False:
     VIDEO_FILE = "/home/drussel1/data/EIMP/videos/Oxygen_Saturation-YzkxXmT4neg.mp4"
     H5_FILE = "/home/drussel1/data/EIMP/new-EIMP-mask-RCNN-detections/Oxygen_Saturation-YzkxXmT4neg.mp4.h5" 
     START_FRAME = 1
@@ -87,8 +88,8 @@ def compute_mask_translation(first_contour, second_contour, point=None, image_sh
     mask1 = mask.contour_to_biggest_mask(image_shape, [first_contour]) 
     mask2 = mask.contour_to_biggest_mask(image_shape, [second_contour])
 
-    cv2.imwrite("mask1.png", mask1*255)
-    cv2.imwrite("mask2.png", mask2*255)
+    #cv2.imwrite("mask1.png", mask1*255)
+    #cv2.imwrite("mask2.png", mask2*255)
 
     loc1 = np.nonzero(mask1)
     loc2 = np.nonzero(mask2)
@@ -111,6 +112,8 @@ def compute_mask_translation(first_contour, second_contour, point=None, image_sh
 
     #new_point = pca2.inverse_transform(pca_point)
     print("old point {}, new point {}".format(point, new_point))
+    if np.any(np.isnan(new_point[0])): # this only seems to break with python3
+        pdb.set_trace()
     return new_point[0].tolist() #is is shape (1, 2)
 
     #ave1 = np.average(loc1, axis=1)
@@ -147,6 +150,9 @@ while ok:
             old_contour = copy.copy(tracks[row_ind].contour)
             new_contour = copy.copy(contours[col_ind])
             new_loc = compute_mask_translation(old_contour, new_contour, np.asarray([hand_box[:2]]), frame.shape[:2])
+            if np.isnan(new_loc[0]):
+                pdb.set_trace()
+                new_loc = compute_mask_translation(old_contour, new_contour, np.asarray([hand_box[:2]]), frame.shape[:2])
             hand_box[0] = new_loc[0]
             hand_box[1] = new_loc[1]
         #    hand_box[0] += diff[1]
@@ -193,7 +199,7 @@ while ok:
     ok, frame = video_reader.read()
     tic = cv2.getTickCount()
 
-    if use_hand_box and state["score"] < LOST_THRESH and False: # TODO implement something which only uses this if the object is  
+    if use_hand_box and state["score"] < LOST_THRESH: # TODO implement something which only uses this if the object is  
         state['target_pos'] = [hand_box[0] + hand_box[2], hand_box[1], hand_box[3]] # this is only different if the confidence is low. It's the center
     #state['target_pos'] = [hand_box[0], hand_box[1]] # this is only different if the confidence is low. It's the center
     #
