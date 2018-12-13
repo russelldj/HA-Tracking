@@ -8,7 +8,8 @@ import pdb
 import copy
 from scipy.optimize import linear_sum_assignment
 
-from .track import Track
+from .track import HandTrack
+from .flow_tracker import FlowTracker
 
 """
 this is a collection of helper functions which help with manipulating maskss
@@ -176,7 +177,7 @@ def match_masks(contours, tracks, frame, next_ID):
             item = 1 - slow_mask_IOU(track.contour, contour, frame.shape[:2]) # Posed as a cost
             if np.isnan(item):
                 pdb.set_trace()
-                item = 1 - slow_mask_IOU(track.contour, contour) # Posed as a cost
+                item = 1 - slow_mask_IOU(track.contour, contour) # I'm not sure why this is here
             cost[i, j] = item
 
     print(cost)
@@ -202,14 +203,14 @@ def match_masks(contours, tracks, frame, next_ID):
     if len(tracks) < 2: #TODO improve the logic here
         for ind, val in enumerate(assigned):
             if val == 0:
-                new_tracks.append(Track(next_ID, contours[ind]))
+                new_tracks.append(HandTrack(next_ID, contours[ind]))
                 next_ID += 1
     #This should keep 
     tracks += new_tracks
     assert type(tracks) == list
     return next_ID # the track will be updated by reference
 
-def hands_and_track(track_bbox, hands, margin=0):
+def hands_and_track(track, hands, margin=0):
     """
     determine if a track overlaps with either of the hands, expanded by a margin
     track : List()
@@ -220,7 +221,21 @@ def hands_and_track(track_bbox, hands, margin=0):
     if margin != 0:
         raise NotImplementedError("the region growing hasn't been done yet")
     #note that this is different from the track mentioned in match_masks as those are actually hands
-    track_contour = bbox_to_contour(tools.tlbr_to_ltwh(tools.ltrb_to_tlbr(track_bbox)))
+    track_contour = bbox_to_contour(tools.tlbr_to_ltwh(tools.ltrb_to_tlbr(track.bbox)))
     for hand in hands:
+        if hand.has_object_track(): # we don't need to add a new one if it already has one
+            continue #leave this itteration of the loop
         if slow_mask_IOU(track_contour, hand.contour) > 0:
-            print("\n\n\n\ntrack overlaps a hand\n\n\n\n")
+            print("the track is {}".format(track_contour))
+            new_tracker = FlowTracker("", "", 1, False) # there's issues with deep copying
+            new_tracker.set_location_ltrb(copy.copy(track.bbox))
+            hand.add_track(new_tracker) # make sure it's a deep copy or else the instance variables are shared
+            # we need to create another track
+            # Give it the same ID
+            # Have it marked as tracking a spefici hand
+            # we really need access to all of the tracks so we can check that they don't have that one
+            # NOT ALL THE TRACKS JUST THE HANDS WHICH WE HAVE ALREADY
+            
+            #hand.add_track(location)
+
+            
