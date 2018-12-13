@@ -82,12 +82,15 @@ class FlowTracker(object):
         else:
             self.box_predict(self.flow, self.bbox)
 
-
-    def predict_with_hands(self, tracks, scale_factor):
+    def predict_with_hands(self, hands, scale_factor=1.0):
         # check if it overlaps with either of the hands 
         # If it does, predict two boxes, ones for the background-predicted motion, the other for the hand-predicted one
-        raise NotImplementedError("")
-   
+        if self.use_polygon:
+            raise NotImplementedError("")
+        else:
+            # convert to polygon and then do a mask overlap
+            mask.hands_and_track(self.bbox, hands)
+            self.box_predict(self.flow, self.bbox)
 
     def polygon_predict(self, flow, polygon, scale_factor=1.0):
         """ this function needs to only consider the points inside of the polygon
@@ -300,18 +303,18 @@ if __name__ == "__main__":
     # add the stuff about masks
     frame_num = int(sys.argv[1]) if len(sys.argv) > 1 else 0 # because you can choose an arbitrary frame
     next_ID = 0
-    tracks = []
+    hand_tracks = []
     while True:
         frame_num += 1 # seemed to be off by one before
         contours = mask.extract_masks_one_frame(H5_FILE, frame_num) 
         flow_tracker.load_next()
         # here we update the track list by refrence
-        next_ID = mask.match_masks(contours, tracks, flow_tracker.image, next_ID)
+        next_ID = mask.match_masks(contours, hand_tracks, flow_tracker.image, next_ID)
         #here we need to check if the track overlaps with either of the hands
-        flow_tracker.predict()
+        flow_tracker.predict_with_hands(hand_tracks)
         #flow_tracker.show_track()
-        flow_tracker.add_track()
-        flow_tracker.image = mask.draw_mask(flow_tracker.image, [track.contour for track in tracks], [track.ID for track in tracks])
+        flow_tracker.add_track()# poorly-named, this should be draw_track
+        flow_tracker.image = mask.draw_mask(flow_tracker.image, [hand.contour for hand in hand_tracks], [hand.ID for hand in hand_tracks])
         cv2.imshow("frame", flow_tracker.image)
         cv2.waitKey(50)
         #flow_tracker.show_flow()

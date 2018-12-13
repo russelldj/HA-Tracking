@@ -1,10 +1,11 @@
 import numpy as np
 import cv2
-import tools
+from . import tools
 #from pycocotools import mask as MaskUtil
 import h5py
 import json
 import pdb
+import copy
 from scipy.optimize import linear_sum_assignment
 
 from .track import Track
@@ -39,7 +40,7 @@ def boundary_to_RLE(image, contours):
     mask = MaskUtil.encode(mask)
     return mask
 
-def extract_masks_one_frame(h5_filename, ind, threshold=0.5, target_class = 1):
+def extract_masks_one_frame(h5_filename, ind, threshold=0.5, target_class = 1, image_shape=(720, 1280)):
     """
     >>> extract_masks_one_frame("/home/drussel1/data/EIMP/EIMP_mask-RCNN_detections/Injection_Preparation.mp4.h5", 200)
     """
@@ -49,6 +50,7 @@ def extract_masks_one_frame(h5_filename, ind, threshold=0.5, target_class = 1):
     data = json.loads(h5_file[ind].value)
     assert list(data.keys()) == ['frame', 'classes', 'video', 'boxes', 'contours']
     contours = data["contours"]
+    # filter out the smaller section of each contour
     boxes    = data["boxes"]
     classes  = data["classes"]
 
@@ -69,19 +71,33 @@ def extract_masks_one_frame(h5_filename, ind, threshold=0.5, target_class = 1):
     else: 
         confs, contours, classes = [], [], []
     contours = list(contours)
+    #filter out the fragments on each one
+    contours = [contour_to_biggest_mask(image_shape, c)[1] for c in contours] #make sure to get the list, not the binary mask
 
     assert type(contours) == list, type(contours)
     return contours
 
-def contour_to_biggest_mask(image_shape, contours):
-    pts = [[np.asarray(c_, dtype = int) for c_ in c] for c in contours] 
+def contour_to_biggest_mask(image_shape, contour):
+    """
+    an opencv mask can have multple regions. This takes the largest one. May break interior contours
+    image_shape : tuple
+         this is the (y, x) shape of the image
+    con
+
+    """
+    numpy_contours = [np.asarray(contigious_whole, dtype = int) for contigious_whole in contour] 
+    # this is just chaning the type of each sub-region to the appropriate on for plotting
     mask  = np.zeros(image_shape)
-    for i, pt in enumerate(pts):
-        for sec in pt:
-            temp_mask = cv2.fillPoly(np.zeros(image_shape), pts=[sec], color=1)
-            if sum(sum(temp_mask)) > sum(sum(mask)):
-                mask = temp_mask
-    return mask
+    #for i, pt in enumerate(pts): # break up the seperate parts This doesn't actually return all the biggest ones in a list of mask "clusters" so this is really dump
+    # each
+    for index, contigious_whole in enumerate(numpy_contours):
+        temp_mask = cv2.fillPoly(np.zeros(image_shape), pts=[contigious_whole], color=1)
+        if sum(sum(temp_mask)) > sum(sum(mask)):
+            mask = temp_mask
+            biggest_contour = contour[index]#presevere it as a list, I'm not sure why
+            # might be best to refactor
+            
+    return mask, [biggest_contour]# this is now a masks which happens to only have one contigious whole
 
 def draw_mask(image, contours, IDs, color=(0,0,0)):
     """
@@ -100,23 +116,29 @@ def draw_mask(image, contours, IDs, color=(0,0,0)):
     for i, pt in enumerate(pts):
         overlay_image = cv2.fillPoly(overlay_image, pts=pt, color=colors[IDs[i]])
     
+    cv2.waitKey(1)
     image = cv2.addWeighted(image,0.7,overlay_image,0.3,0)
     return image
 
 def slow_mask_IOU(contour1, contour2, image_shape=(720,1280)):
-    contour1 = [np.asarray(c_, dtype = int) for c_ in contour1]
-    contour2 = [np.asarray(c_, dtype = int) for c_ in contour2]
-    
-    mask1 = cv2.fillPoly(np.zeros((image_shape)), pts=contour1, color=1)
-    mask2 = cv2.fillPoly(np.zeros((image_shape)), pts=contour2, color=1)
+    if type(contour1) != list or type(contour2) != list:
+        pdb.set_trace()
+    contour1 = [np.asarray(contour, dtype = int) for contour in contour1]
+    contour2 = [np.asarray(contour, dtype = int) for contour in contour2]
+    try:
+        mask1 = cv2.fillPoly(np.zeros((image_shape)), pts=contour1, color=1)
+        mask2 = cv2.fillPoly(np.zeros((image_shape)), pts=contour2, color=1)
+    except Exception as e:
+        print("error e {}".format(e))
+        pdb.set_trace()
     overlap = sum(sum(np.multiply(mask1, mask2)))
     total = sum(sum(mask1)) + sum(sum(mask2)) - overlap 
     IOU = float(overlap) / total
     return IOU
 
-def compute_mask_translation(first_contour, second_contour, point=None, image_shape=None):
-    mask1 = mask.contour_to_biggest_mask(image_shape, [first_contour])
-    mask2 = mask.contour_to_biggest_mask(image_shape, [second_contour])
+def compute_mask_translation(first_contour, second_contour, point=None, image_shape=None): 
+    mask1, _ = mask.contour_to_biggest_mask(image_shape, first_contour)
+    mask2, _ = mask.contour_to_biggest_mask(image_shape, second_contour)
 
     cv2.imwrite("mask1.png", mask1*255)
     cv2.imwrite("mask2.png", mask2*255)
@@ -146,6 +168,7 @@ def compute_mask_translation(first_contour, second_contour, point=None, image_sh
 
 
 def match_masks(contours, tracks, frame, next_ID):
+    assert type(tracks) == list
     cost = np.zeros((len(tracks), len(contours)))
     for i, track in enumerate(tracks):
         for j, contour in enumerate(contours):
@@ -181,5 +204,23 @@ def match_masks(contours, tracks, frame, next_ID):
             if val == 0:
                 new_tracks.append(Track(next_ID, contours[ind]))
                 next_ID += 1
+    #This should keep 
     tracks += new_tracks
+    assert type(tracks) == list
     return next_ID # the track will be updated by reference
+
+def hands_and_track(track_bbox, hands, margin=0):
+    """
+    determine if a track overlaps with either of the hands, expanded by a margin
+    track : List()
+        I'm not sure what this is going to be 
+    hands : List()
+        Lots of lists representing the the tracks
+    """
+    if margin != 0:
+        raise NotImplementedError("the region growing hasn't been done yet")
+    #note that this is different from the track mentioned in match_masks as those are actually hands
+    track_contour = bbox_to_contour(tools.tlbr_to_ltwh(tools.ltrb_to_tlbr(track_bbox)))
+    for hand in hands:
+        if slow_mask_IOU(track_contour, hand.contour) > 0:
+            print("\n\n\n\ntrack overlaps a hand\n\n\n\n")
