@@ -39,11 +39,11 @@ image_files = sorted(glob.glob('./bag/*.jpg'))
 #init_rbox = [334.02,128.36,438.19,188.78,396.39,260.83,292.23,200.41]
 #[cx, cy, w, h] = get_axis_aligned_bbox(init_rbox)
 
-if False:
+if True:
     VIDEO_FILE = "/home/drussel1/data/EIMP/videos/Injection_Preparation.mp4" 
     H5_FILE = "/home/drussel1/data/EIMP/EIMP_mask-RCNN_detections/Injection_Preparation.mp4.h5"
-    START_FRAME = 200
-if True:
+    START_FRAME = 400
+if False:
     VIDEO_FILE = "/home/drussel1/data/ADL/ADL1619_videos/P_18.MP4"
     H5_FILE = "/home/drussel1/data/ADL/new_mask_outputs/dataset_per_frame/P_18.MP4.h5" 
     START_FRAME = 18020 
@@ -84,12 +84,24 @@ next_ID = 0
 
 tracks = []
 
-def compute_mask_translation(first_contour, second_contour, point=None, image_shape=None):
+def compute_mask_translation(first_contour, second_contour, point=None, image_shape=None, image=None):
     mask1 = mask.contour_to_biggest_mask(image_shape, [first_contour]) 
     mask2 = mask.contour_to_biggest_mask(image_shape, [second_contour])
-
-    #cv2.imwrite("mask1.png", mask1*255)
-    #cv2.imwrite("mask2.png", mask2*255)
+    #background = np.zeros((mask1.shape[0], mask1.shape[1], 3))
+    #for point in first_contour[0]:
+    #    #cv2.polylines(img, pts, isClosed, color
+    #    cv2.polylines(img, pts, False, (255, 0, 0))
+    #    cv2.circle(background, (point[0]), 3, )
+    #for point in second_contour[0]:
+    #    cv2.circle(background, (point[0]), 3, (0, 0, 255))
+    cv2.polylines(image, [np.asarray(p) for p in first_contour], False, (255, 0, 0), 4)
+    cv2.polylines(image, [np.asarray(p) for p in second_contour], False, (0, 0, 255), 4)
+    cv2.imshow("ICP", frame)
+    pdb.set_trace()
+    cv2.imwrite("ICP_points.png", frame)
+    
+    cv2.imwrite("mask1.png", mask1*255)
+    cv2.imwrite("mask2.png", mask2*255)
 
     loc1 = np.nonzero(mask1)
     loc2 = np.nonzero(mask2)
@@ -144,12 +156,12 @@ while ok:
     new_tracks = []
     for assigniment_ind, (row_ind, col_ind) in enumerate(zip(row_inds, col_inds)):
 
-        if tracks[row_ind].ID == 1:
+        if tracks[row_ind].ID == 0:
             use_hand_box = True
             print("cost: {}".format(cost[row_ind, col_ind]))
             old_contour = copy.copy(tracks[row_ind].contour)
             new_contour = copy.copy(contours[col_ind])
-            new_loc = compute_mask_translation(old_contour, new_contour, np.asarray([hand_box[:2]]), frame.shape[:2])
+            new_loc = compute_mask_translation(old_contour, new_contour, np.asarray([hand_box[:2]]), frame.shape[:2], frame)
             if np.isnan(new_loc[0]):
                 pdb.set_trace()
                 new_loc = compute_mask_translation(old_contour, new_contour, np.asarray([hand_box[:2]]), frame.shape[:2])
@@ -203,7 +215,7 @@ while ok:
         state['target_pos'] = [hand_box[0] + hand_box[2], hand_box[1], hand_box[3]] # this is only different if the confidence is low. It's the center
     #state['target_pos'] = [hand_box[0], hand_box[1]] # this is only different if the confidence is low. It's the center
     #
-    state = SiamRPN_track(state, frame)  # track
+    state, crop = SiamRPN_track(state, frame)  # track
     score = state["score"]
     print(score)
     toc += cv2.getTickCount()-tic

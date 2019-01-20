@@ -66,13 +66,16 @@ os.system("/bin/rm chips/*")
 
 while ok:
     cv2.rectangle(frame, (ltwh[0], ltwh[1]), (ltwh[0] + ltwh[2], ltwh[1] + ltwh[3]), (255,0,0) , 3)
-    cv2.putText(frame, str(score), (ltwh[0], ltwh[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
+    cv2.putText(frame, "conf: {:03f}".format(score), (ltwh[0], ltwh[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
     cv2.imshow('SiamRPN', frame)
     video_writer.write(frame)
     cv2.waitKey(1)
     ok, frame = video_reader.read()
     tic = cv2.getTickCount()
-    ltwh, score = tracker.predict(frame)  # track
+    ltwh, score, crop_region = tracker.predict(frame)  # track
+    crop_region = [int(c) for c in crop_region]
+    cv2.rectangle(frame, (crop_region[0], crop_region[1]), (crop_region[2], crop_region[3]), (0,0,255) , 3)
+    cv2.putText(frame, "search window", (crop_region[0], crop_region[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
     print(score)
     toc += cv2.getTickCount()-tic
     frame_num += 1
