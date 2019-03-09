@@ -1,6 +1,8 @@
 #! /usr/bin/python3
 # From Python
 # It requires OpenCV installed for Python
+
+# this should be run from the openpose <root>/examples/
 import sys
 import cv2
 import os
