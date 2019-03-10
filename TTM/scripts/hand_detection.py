@@ -1,7 +1,6 @@
 #! /usr/bin/python3
 # From Python
 # It requires OpenCV installed for Python
-# This needs to be moved to the libs/openpose/build/examples/tutorial_api_python directory and run from there
 
 # this should be run from the openpose <root>/examples/
 import sys
@@ -75,29 +74,23 @@ def computeKeypoints():
     opWrapper.start()
     
     # Up till now this is just openpose initialization
+    VIDEO_INPUT_FNAME = "/home/russeldj/dev/TTM-data/raw/EIMP/Injection_Preparation.mp4" 
+    vidCapture = cv2.VideoCapture(VIDEO_INPUT_FNAME)
+    _, imageToProcess = vidCapture.read()
     
     # select the rectangles, which are in [x, y, w, h] parametarization
     # the only modification that needs
-    rect, imageToProcess = createBox(args[0].image_path)
+    rect, imageToProcess = createBox(args[0].image_path, imageToProcess)
+
+    # currently this takes the same box for left and right but this will be made more inteligent
     #this appears to be x1, y1, w, h with w needing to be equal to h
     handRectangles = [
-        # Left/Right hands person 0
-        #[
-        #op.Rectangle(320.035889, 377.675049, 69.300949, 69.300949),
-        #op.Rectangle(0., 0., 0., 0.),
-        #],
-        # Left/Right hands person 1
         [
         #op.Rectangle(200.0, 70.0, 500.0, 500.0),
         op.Rectangle(*rect), # expand to fill the arguments
         #op.Rectangle(46.449715, 404.559753, 98.898178, 98.898178),
-        op.Rectangle(700.0, 3.0, 550.0, 550.0),
+        op.Rectangle(*rect) # expand to fill the arguments
         ]#,
-        # Left/Right hands person 2
-        #[
-        #op.Rectangle(185.692673, 303.112244, 157.587555, 157.587555),
-        #op.Rectangle(88.984360, 268.866547, 117.818230, 117.818230),
-        #]
     ]
     
     # Create new datum
@@ -113,25 +106,55 @@ def computeKeypoints():
     cv2.waitKey(0)
 
 def loadMask(filename=""):
+    """
+    find the location of the hand from Mask R-CNN output
+    """
     INJECTION_PREPARATION_FNAME = "/home/russeldj/dev/TTM-data/processed/EIMP/new-EIMP-mask-RCNN-detections/Injection_Preparation.mp4.h5"
-    mask_ = TTM_mask.extract_masks_one_frame(INJECTION_PREPARATION_FNAME, 0)
+    IMAGE_SHAPE = (640, 980)
+    IDS = [0, 1]
+    BOUNDARY = 50 # the additional context around the hand to add in pixels
+
+    # this is a list which is the number of masks long
+    mask_contours = TTM_mask.extract_masks_one_frame(INJECTION_PREPARATION_FNAME, 0)
+    
+    #HACK
+    # Only take the second hand 
+    for mask_contour in mask_contours[1:2]:
+        mask_array = TTM_mask.contour_to_biggest_mask(IMAGE_SHAPE, [mask_contour])# this is supposed to be a list of contours
+        #np.save("maskarray.npy", mask_array)
+        y_inds, x_inds = np.nonzero(mask_array)
+    
+    x = min(x_inds) - BOUNDARY
+    y = min(y_inds) - BOUNDARY
+    w = max(x_inds) - min(x_inds) + 2 * BOUNDARY
+    h = max(y_inds) - min(y_inds) + 2 * BOUNDARY
+
+    return [x, y, w, h]
+
+    #visualization = TTM_mask.draw_mask(np.zeros(IMAGE_SHAPE, dtype=np.uint8), mask_contours, IDS)
+    #cv2.imshow("", visualization)
+    #cv2.waitKey(0)
+    #mask_array = TTM_mask.contour_to_biggest_mask(IMAGE_SHAPE, mask_list)
 
 
 def createBox(filename="", imageToProcess=np.zeros((480, 640, 3))):
     """
     This by some means needs to load the hands and automatically select a rectangle
     """
-    loadMask()
-    
-
+    VIDEO_INPUT_FNAME = "/home/russeldj/dev/TTM-data/raw/EIMP/Bag_Mask_Ventilation-Wv78jVhSFTI.mp4" 
+    USE_MASK_RCNN = True
     # hacky enum
     X = 0
     Y = 1
     W = 2
     H = 3
 
-    imageToProcess = cv2.imread(filename)
-    rect = list(cv2.selectROI(imageToProcess))
+    #imageToProcess = cv2.imread(filename)
+    #pdb.set_trace()
+    if USE_MASK_RCNN:
+        rect = loadMask()
+    else:
+        rect = list(cv2.selectROI(imageToProcess))
     
     
     if rect[W] > rect[H]:
@@ -151,6 +174,8 @@ def createBox(filename="", imageToProcess=np.zeros((480, 640, 3))):
     black = (0, 0, 0)
     width = 5
     cv2.rectangle(display, tl, br, black, width)
+    cv2.imshow("", display)
+    cv2.waitKey(1)
     
     cv2.destroyAllWindows()
     return rect, imageToProcess
