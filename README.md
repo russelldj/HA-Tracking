@@ -2,8 +2,11 @@
 This repository is used for tracking hand-manipulated objects
 
 # quickstart
-I'll get back to you on this one, sort of forgot how everything works
-Make sure you initialize all of the submodules with git submodules init or something like that
+* I'll get back to you on this one, sort of forgot how everything works
+* Make sure you initialize all of the submodules with git submodules init or something like that
+* To build openpose run export if on 18.04 run `export CC=gcc-6`
+* The hand\_detection.py file should be copied as specified in it's first line
+
 
 # TODOs
 * Track objects in the hand better, probably by finally doing icp
@@ -11,4 +14,5 @@ Make sure you initialize all of the submodules with git submodules init or somet
 * try Kitani's hand detector to better localize the part of the hand we care about
 * Document the finger detector
 * Automatically specify the location of the hands with the output of Mask R-CNN probably
+* Annoyingly, I haven't been able to use cuDNN on my account on the tars server
 
