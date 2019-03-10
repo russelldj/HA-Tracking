@@ -1,3 +1,6 @@
 [submodule "TTM/libs/openpose"]
 	path = TTM/libs/openpose
 	url = https://github.com/CMU-Perceptual-Computing-Lab/openpose.git
+[submodule "TTM/data/TTM-data"]
+	path = TTM/data/TTM-data
+	url = git@github.com:russelldj/TTM-data.git
