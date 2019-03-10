@@ -15,4 +15,4 @@ This repository is used for tracking hand-manipulated objects
 * Document the finger detector
 * Automatically specify the location of the hands with the output of Mask R-CNN probably
 * Annoyingly, I haven't been able to use cuDNN on my account on the tars server
-
+* Perhaps retrain mask R-CNN on the hands

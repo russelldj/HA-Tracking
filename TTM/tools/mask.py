@@ -71,6 +71,9 @@ def extract_masks_one_frame(h5_filename, ind, threshold=0.5, target_class = 1):
     return contours
 
 def contour_to_biggest_mask(image_shape, contours):
+    """
+    This is still slow
+    """
     pts = [[np.asarray(c_, dtype = int) for c_ in c] for c in contours] 
     mask  = np.zeros(image_shape)
     for i, pt in enumerate(pts):
