@@ -4,3 +4,6 @@
 [submodule "TTM/data/TTM-data"]
 	path = TTM/data/TTM-data
 	url = git@github.com:russelldj/TTM-data.git
+[submodule "TTM/libs/DaSiamRPN"]
+	path = TTM/libs/DaSiamRPN
+	url = git@github.com:russelldj/DaSiamRPN.git
