@@ -1,4 +1,12 @@
 import numpy as np
+import glob
+
+def getAllInDir(dir_filename):
+    if not dir_filename[-1] =="/":
+        dir_filename+="/"
+    all_files = glob.glob("{}*".format(dir_filename))
+    return all_files
+
 def safe_crop_ltbr(image, x1, y1, x2, y2):
     """
     Returns a crop of an image based on the image and an [left, top, right, bottom] bounding box

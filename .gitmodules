@@ -7,3 +7,6 @@
 [submodule "TTM/libs/DaSiamRPN"]
 	path = TTM/libs/DaSiamRPN
 	url = git@github.com:russelldj/DaSiamRPN.git
+[submodule "TTM/libs/ubelt"]
+	path = TTM/libs/ubelt
+	url = git@github.com:russelldj/ubelt.git

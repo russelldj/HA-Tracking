@@ -4,6 +4,8 @@ import argparse
 import cv2
 import pdb
 
+from tools import tools, mask, KeypointCapture
+
 """
 THis is going to do everything
 Most operations that I want to run will be functions in here which can just be called directly with or without args
@@ -11,7 +13,6 @@ Most operations that I want to run will be functions in here which can just be c
 """
 VIDEO_FILE = "/home/drussel1/data/EIMP/videos/Injection_Preparation.mp4"
 START_FRAME = 300
-
 
 def computeOpenPoseKeypoints():
     sys.path.append('libs/openpose/build/python');    
@@ -24,6 +25,12 @@ def test_H5_load():
 def FullTracking():
     from libs.DaSiamRPN.code.SiamRPN_tracker import SiamRPN_tracker
     print(SiamRPN_tracker)
+
+def loadKeypoints(foldername="./data/TTM-data/processed/EIMP/Mask-Guided-Keypoints/Blood_Glucose-6Q-UJJmTMQA/"):
+    keypoint_capture = KeypointCapture.Read2DJsonPath(foldername, 0, 0)
+    for i in range(keypoint_capture.num_frames):
+        print(keypoint_capture.GetFrameKeypointsAsOneDict(i), i)
+    print(keypoint_capture.GetFrameKeypointsAsOneDict(0))
 
 def testDaSiamTracking(video_fname=VIDEO_FILE):
     from libs.DaSiamRPN.code.SiamRPN_tracker import SiamRPN_tracker
@@ -47,7 +54,6 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
     hand_box = [float(i) for i in ltwh]
     track_1_diff_xy = [0.0, 0.0]
     cv2.destroyAllWindows()
-    pdb.set_trace()
     tracker = SiamRPN_tracker(frame, ltwh) 
 
     while ok:
@@ -68,7 +74,8 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
 
 
 if __name__ == "__main__":
-    testDaSiamTracking()
+    loadKeypoints()
+    #testDaSiamTracking()
     #FullTracking()
     #computeOpenPoseKeypoints()
 
