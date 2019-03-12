@@ -38,6 +38,7 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
     # import the tracker
     from libs.DaSiamRPN.code.SiamRPN_tracker import SiamRPN_tracker
     LOST_THRESH = 0.8
+    FINGER_CONF = 0.7
     OUTPUT_FILENAME = "video.avi"
     SELECT_REGION = False # choose your own initial region
     SET_SEARCH = True # specify where to look
@@ -73,7 +74,14 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
         i = 0
         while ok:
             current_keypoints = keypoint_capture.GetFrameKeypointsAsOneDict(i)
-            print(current_keypoints)
+            if "Right_Index1" in current_keypoints and current_keypoints["Right_Index1"][2] != 0:
+                right_index = current_keypoints["Right_Index1"]
+                print("the confs are {}".format([x[2] for x in current_keypoints.values()]))
+                # this threshold needs to be tuned
+                if right_index[2] > FINGER_CONF:
+                    print("right index {}".format(right_index))
+                    tracker.setSearchLocation(right_index[0:2])
+
             cv2.rectangle(frame, (ltwh[0], ltwh[1]), (ltwh[0] + ltwh[2], ltwh[1] + ltwh[3]), (255,0,0) , 3)
             cv2.putText(frame, "conf: {:03f}".format(score), (ltwh[0], ltwh[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
             cv2.imshow('SiamRPN', frame)
