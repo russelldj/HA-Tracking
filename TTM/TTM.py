@@ -37,10 +37,10 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
     LOST_THRESH = 0.8
     FINGER_CONF = 0.2#0.2 # still needs to be further tuned
     FINGER = "Right_Index4"
-    OUTPUT_FILENAME = "video.avi"
     SELECT_REGION = False # choose your own initial region
-    SET_SEARCH = True # specify where to look
+    SET_SEARCH = False # specify where to look
     IMSHOW = False
+    OUTPUT_FILENAME = "video_setsearch_{}.avi".format(SET_SEARCH)
     FPS = 30
     WIDTH = 1280
     HEIGHT = 720
@@ -89,7 +89,7 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
             cv2.putText(frame, "conf: {:03f}".format(score), (ltwh[0], ltwh[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
 
             # add the keypoints
-            frame = visualizer.PlotSingleFrameFromIndOpenCV(frame, i)
+            #frame = visualizer.PlotSingleFrameFromIndOpenCV(frame, i)
             frame = visualizer.PlotSingleFrameFromIndOpenCVOpenPose(frame, i)
             if IMSHOW:
                 cv2.imshow('SiamRPN', frame)
