@@ -30,9 +30,6 @@ def FullTracking():
 def loadKeypoints(foldername=KEYPOINTS_FILE):
     keypoint_capture = KeypointCapture.Read2DJsonPath(foldername, 0, 0)
     return keypoint_capture
-    #for i in range(keypoint_capture.num_frames):
-    #    print(keypoint_capture.GetFrameKeypointsAsOneDict(i), i)
-    #print(keypoint_capture.GetFrameKeypointsAsOneDict(0))
 
 def testDaSiamTracking(video_fname=VIDEO_FILE):
     # import the tracker
