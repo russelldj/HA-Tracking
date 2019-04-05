@@ -40,6 +40,7 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
     OUTPUT_FILENAME = "video.avi"
     SELECT_REGION = False # choose your own initial region
     SET_SEARCH = True # specify where to look
+    IMSHOW = False
     FPS = 30
     WIDTH = 1280
     HEIGHT = 720
@@ -89,12 +90,13 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
 
             # add the keypoints
             frame = visualizer.PlotSingleFrameFromIndOpenCV(frame, i)
-            cv2.imshow('SiamRPN', frame)
+            frame = visualizer.PlotSingleFrameFromIndOpenCVOpenPose(frame, i)
+            if IMSHOW:
+                cv2.imshow('SiamRPN', frame)
             video_writer.write(frame)
             cv2.waitKey(1)
             ok, frame = video_reader.read()
             tic = cv2.getTickCount()
-            #tracker.setSearchRegion([100, 100, 50, 100]) # set search region
             ltwh, score, crop_region = tracker.predict(frame)  # track
             crop_region = [int(c) for c in crop_region]
             cv2.rectangle(frame, (crop_region[0], crop_region[1]), (crop_region[2], crop_region[3]), (0,0,255) , 3)
