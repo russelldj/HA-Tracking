@@ -179,7 +179,6 @@ class KeypointVisualization:
 
         for connection in connections:
             for side in [0, 1]:
-                print(connection)
                 offset = side * 21 + 25 # shift by the correct number of points in the array
                 key1 = self.ordered_keypoints[connection[0] + offset]
                 key2 = self.ordered_keypoints[connection[1] + offset]
@@ -190,7 +189,6 @@ class KeypointVisualization:
                         continue
                 else:
                     continue # go to the next itteration because the keypoint is not in this frame
-                print("({}, {}), ({}, {})".format(x1, y1, x2, y2))
                 color = colors[connection[0],:].tolist() # get the color of the first point
                 cv2.line(im, (int(x1), int(y1)), (int(x2), int(y2)), color, self.FINGER_THICKNESS) # repeat the last color
 
