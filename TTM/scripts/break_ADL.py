@@ -10,21 +10,29 @@ for i in range(13,21):
     df = pd.read_csv('/home/drussel1/data/ADL/ADL_annotations/object_annotation/object_annot_P_{:02d}.txt'.format(i), sep=' ', 
                 names=['ID', 'x1', 'y1', 'x2', 'y2', 'frame', 'active',
                 'class', 'NaN'], index_col=None)
-    pdb.set_trace()
+    #pdb.set_trace()
     df.sort_values(by=['ID', 'frame'], inplace = True)
-    
+     
+    IDs = list(set(df['ID'].tolist()))
+    pdb.set_trace()
+    for ID in IDs:
+        track = df.loc[df['ID'] == ID]
+        initial_frame = track.iloc[0]
+        print(initial_frame[[1,2,3,4]].tolist())
     print(df)
-    print(VIDEO_FILE.format(i))
-    cap = cv2.VideoCapture(VIDEO_FILE.format(i))
-    print(cap)
-    
-    for index, row in df.iterrows():
-           print(row['frame'])
-           cap.set(1, row['frame'])
-           ret, img = cap.read()
-           if not ret:
-               break
-           crop = img[2*row['y1']:2*row['y2'],2*row['x1']:2*row['x2']].copy()
-           crop = cv2.resize(crop, IMG_SHAPE, cv2.INTER_CUBIC)  
-           print(crop.shape)
-           cv2.imwrite('{}/{:02d}{:04d}_c1s1_{}_00.jpg'.format(OUTPUT_FOLDER, i, row['ID'], row['frame']), crop)
+
+
+    #print(VIDEO_FILE.format(i))
+    #cap = cv2.VideoCapture(VIDEO_FILE.format(i))
+    #print(cap)
+    #
+    #for index, row in df.iterrows():
+    #       print(row['frame'])
+    #       cap.set(1, row['frame'])
+    #       ret, img = cap.read()
+    #       if not ret:
+    #           break
+    #       crop = img[2*row['y1']:2*row['y2'],2*row['x1']:2*row['x2']].copy()
+    #       crop = cv2.resize(crop, IMG_SHAPE, cv2.INTER_CUBIC)  
+    #       print(crop.shape)
+    #       cv2.imwrite('{}/{:02d}{:04d}_c1s1_{}_00.jpg'.format(OUTPUT_FOLDER, i, row['ID'], row['frame']), crop)
