@@ -41,10 +41,10 @@ def extract_masks_one_frame(h5_filename, ind, threshold=0.5, target_class = 1):
     >>> extract_masks_one_frame("/home/drussel1/data/EIMP/EIMP_mask-RCNN_detections/Injection_Preparation.mp4.h5", 200)
     """
     h5_file = h5py.File(h5_filename, "r")
-    ind = str(ind)
+    ind = "{:09d}".format(ind)
     assert ind in h5_file.keys(), "ind: {} wasn't in the keys for {}".format(ind, h5_filename)
     data = json.loads(h5_file[ind].value)
-    assert list(data.keys()) == ['frame', 'classes', 'video', 'boxes', 'contours']
+    #assert list(data.keys()) == ['frame', 'classes', 'video', 'boxes', 'contours']
     contours = data["contours"]
     boxes    = data["boxes"]
     classes  = data["classes"]

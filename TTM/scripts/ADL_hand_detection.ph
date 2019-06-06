@@ -15,12 +15,13 @@ import pdb
 import copy
 
 # import the mask module
-sys.path.append("../../../../..")
+TTM_ROOT = "/home/drussel1/dev/TTM/TTM"
+sys.path.append(TTM_ROOT)
 from tools import tools as TTM_tools
 from tools import mask as TTM_mask
 
 
-INJECTION_PREPARATION_FNAME = "../../../../../data/TTM-data/processed/EIMP/new-EIMP-mask-RCNN-detections/Injection_Preparation.mp4.h5"
+INJECTION_PREPARATION_FNAME = "{}/data/TTM-data/processed/EIMP/new-EIMP-mask-RCNN-detections/Injection_Preparation.mp4.h5".format(TTM_ROOT)
 IMAGE_SHAPE = (640, 980)
 IDS = [0, 1]
 BOUNDARY_PX = 50 # the additional context around the hand to add in pixels
@@ -88,12 +89,9 @@ class keypointExtractor():
         self.opWrapper.configure(params)
         self.opWrapper.start()
 
-    def computeKeypoints(self):
-        
-        
+    def computeKeypoints(self, input_video=None, input_h5=None):
         # Up till now this is just openpose initialization
-        VIDEO_INPUT_FNAME = "../../../../../data/TTM-data/raw/EIMP/Injection_Preparation.mp4" 
-        vidCapture = cv2.VideoCapture(VIDEO_INPUT_FNAME)
+        vidCapture = cv2.VideoCapture(input_video)
         if not vidCapture.isOpened():
             raise ValueError("The capture failed to open from filename {}".format(VIDEO_INPUT_FNAME))
         for frame_index in range(BIG_NUMBER): # loop for an arbitrarily large number of times
@@ -101,7 +99,7 @@ class keypointExtractor():
             if not ret:
                 break
             #TODO pick a naming convention
-            hand_rectangles, imageToProcess = self.createBoxes(imageToProcess, frame_index)
+            hand_rectangles, imageToProcess = self.createBoxes(input_h5, imageToProcess, frame_index)
 
             # Create new datum
             datum = self.op.Datum()
@@ -112,8 +110,13 @@ class keypointExtractor():
             self.opWrapper.emplaceAndPop([datum])
             print("Left hand keypoints: \n" + str(datum.handKeypoints[0]))
             print("Right hand keypoints: \n" + str(datum.handKeypoints[1]))
-            cv2.imshow("OpenPose 1.4.0 - Tutorial Python API", datum.cvOutputData)
-            cv2.waitKey(10)
+            VISUALIZE = False
+            if VISUALIZE:
+                cv2.imshow("OpenPose 1.4.0 - Tutorial Python API", datum.cvOutputData)
+                cv2.waitKey(10)
+            else:
+                cv2.imwrite("test.png", datum.cvOutputData)
+                pdb.set_trace()
    
 
     def loadMask(self, filename=INJECTION_PREPARATION_FNAME, index=0):
@@ -152,15 +155,15 @@ class keypointExtractor():
         return [x, y, w, h]
 
 
-    def createBoxes(self, imageToProcess=np.zeros((480, 640, 3)), frame_index=0):
+    def createBoxes(self, h5_file, imageToProcess=np.zeros((480, 640, 3)), frame_index=0):
         """
         This by some means needs to load the hands and automatically select a rectangle
         """
-        VIDEO_INPUT_FNAME = "/home/russeldj/dev/TTM-data/raw/EIMP/Bag_Mask_Ventilation-Wv78jVhSFTI.mp4" 
+        #VIDEO_INPUT_FNAME = "/home/russeldj/dev/TTM-data/raw/EIMP/Bag_Mask_Ventilation-Wv78jVhSFTI.mp4" 
         USE_MASK_RCNN = True
     
         if USE_MASK_RCNN:
-            rects = self.loadMask(INJECTION_PREPARATION_FNAME, frame_index)
+            rects = self.loadMask(h5_file, frame_index)
         else:
             rects = [list(cv2.selectROI(imageToProcess))] # this is just massaging it into the form of the other function
         
@@ -222,4 +225,10 @@ class keypointExtractor():
 
 # run the extraction
 if __name__ == "__main__":
-    keypointExtractor().computeKeypoints()
+    keypoint_extractor = keypointExtractor()
+    for i in range(1,21): 
+        video_name = '/home/drussel1/data/ADL/ADL_videos/P_{:02d}.MP4'.format(i)
+        h5_name = '/home/drussel1/data/ADL/detections/5_29_19/P_{:02d}.h5'.format(i) 
+        assert(os.path.isfile(video_name))
+        assert(os.path.isfile(h5_name))
+        keypoint_extractor.computeKeypoints(video_name, h5_name)

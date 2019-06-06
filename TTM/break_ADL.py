@@ -50,10 +50,13 @@ def run_video(start_vid, end_vid):# inclusive, exclusive
             for ID in IDs:
                 track = df.loc[df['ID'] == ID]
                 track_section(track, vid, outfile)
-                outfile.write("=========\n")
 if __name__ == "__main__": 
     # creating thread 
-    run_video(1,21)
+    pdb.set_trace()
+    run_video(1,2)
+    #run_video(6,11)
+    #run_video(11,16)
+    #run_video(16,21)
     #for i in range(3,6,2):
     #    all_threads.append(threading.Thread(target=run_video, args=(i,i+2)))
 

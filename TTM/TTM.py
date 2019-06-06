@@ -4,6 +4,7 @@ import argparse
 import cv2
 import pdb
 import numpy as np
+import argparse
 
 from tools import tools, mask, KeypointCapture, KeypointVisualization
 
@@ -25,7 +26,7 @@ def test_H5_load():
     pass
 
 def FullTracking():
-    from libs.DaSiamRPN.code.SiamRPN_tracker import SiamRPN_tracker
+    from libs.DaSiamRPN.code import SiamRPN_tracker
     print(SiamRPN_tracker)
 
 def loadKeypoints(foldername=KEYPOINTS_FILE):
@@ -34,13 +35,22 @@ def loadKeypoints(foldername=KEYPOINTS_FILE):
 
 def testDaSiamTracking(video_fname=VIDEO_FILE):
     # import the tracker
-    from libs.DaSiamRPN.code.SiamRPN_tracker import SiamRPN_tracker
+    from libs.DaSiamRPN.code import SiamRPN_tracker# this takes a while
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--imshow", help="show the tracking", action="store_true")
+    parser.add_argument("--set-search", help="use hand context", action="store_true")
+    parser.add_argument("--select-region", help="initialize the tracker by hand", action="store_true")
+    parser.add_argument("--video-file", help="The video to run on", default=VIDEO_FILE)
+    parser.add_argument("--keypoints-file", help="The folder of keypoints to use", default=KEYPOINTS_FILE)
+    parser.add_argument("--start-frame", help="what frame to start at", default=START_FRAME, type=int)
+    args = parser.parse_args()
     LOST_THRESH = 0.8
     FINGER_CONF = 0.2#0.2 # still needs to be further tuned
-    FINGER = "Right_Index4"
-    SELECT_REGION = False # choose your own initial region
-    SET_SEARCH = True # specify where to look
-    IMSHOW = False
+    #FINGER = "Right_Index4"
+    SELECT_REGION = args.select_region#False # choose your own initial region
+    SET_SEARCH = args.set_search#False # specify where to look
+    IMSHOW = args.imshow#False
     OUTPUT_FILENAME = "video_setsearch_{}.avi".format(SET_SEARCH)
     FPS = 30
     WIDTH = 1280
@@ -48,13 +58,13 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
     use_hand_box = False
     score = 1
     toc = 0
-    frame_num = START_FRAME
+    frame_num = args.start_frame
     
     # create the visualizer
     fourcc = cv2.VideoWriter_fourcc(*"MJPG")
     video_writer = cv2.VideoWriter(OUTPUT_FILENAME, fourcc, FPS, (WIDTH, HEIGHT))
-    video_reader = cv2.VideoCapture(VIDEO_FILE)
-    video_reader.set(1, START_FRAME)
+    video_reader = cv2.VideoCapture(args.video_file)
+    video_reader.set(1, frame_num)
     ok, frame = video_reader.read()
     
     # choose the initial region
@@ -67,7 +77,7 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
     track_1_diff_xy = [0.0, 0.0]
     cv2.destroyAllWindows()
     # create a wrapper around the tracker
-    tracker = SiamRPN_tracker(frame, ltwh) 
+    tracker = SiamRPN_tracker.SiamRPN_tracker(frame, ltwh) 
     tracker.setSearchRegion(ltwh)
 
     if SET_SEARCH:
@@ -100,7 +110,8 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
                     offset = tracker_location - best_location
 
                 if best_location is not None: # check if this was actually set
-                    cv2.circle(frame, tuple([int(x) for x in best_location.tolist()]), 15, (255,255,255), 10)
+                    pass
+                    #cv2.circle(frame, tuple([int(x) for x in best_location.tolist()]), 15, (255,255,255), 10)
                 was_lost = True
 
             elif tracker.isLost() and was_lost:
@@ -111,7 +122,7 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
                     if x_y_conf[2] > FINGER_CONF: 
                         x_y = x_y_conf[:2]
                         x_y += offset # validate this is the right direction
-                        cv2.circle(frame, tuple([int(x) for x in x_y]), 15, (0,0,0), 10)
+                        #cv2.circle(frame, tuple([int(x) for x in x_y]), 15, (0,0,0), 10)
                         tracker.setSearchLocation(x_y)
 
             elif not tracker.isLost() and not was_lost:
@@ -147,9 +158,12 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
             frame = visualizer.PlotSingleFrameFromIndOpenCVOpenPose(frame, i)
             if IMSHOW:
                 cv2.imshow('SiamRPN', frame)
+                cv2.imwrite("frame.png",frame)
             video_writer.write(frame)
             cv2.waitKey(1)
             ok, frame = video_reader.read()
+            if not ok:
+                break
             tic = cv2.getTickCount()
             ltwh, score, crop_region = tracker.predict(frame)  # track
             crop_region = [int(c) for c in crop_region]
@@ -162,9 +176,12 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
             cv2.putText(frame, "conf: {:03f}".format(score), (ltwh[0], ltwh[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
             if IMSHOW:
                 cv2.imshow('SiamRPN', frame)
+                cv2.imwrite("frame.png",frame)
             video_writer.write(frame)
             cv2.waitKey(1)
             ok, frame = video_reader.read()
+            if not ok:
+                break
             tic = cv2.getTickCount()
             ltwh, score, crop_region = tracker.predict(frame)  # track
             crop_region = [int(c) for c in crop_region]
