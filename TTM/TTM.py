@@ -33,6 +33,16 @@ def loadKeypoints(foldername=KEYPOINTS_FILE):
     keypoint_capture = KeypointCapture.Read2DJsonPath(foldername, 0, 0)
     return keypoint_capture
 
+def trackingFromNpy():
+    # set the initial region and frame
+    # read in the proper numpy array
+    # convert it to the x, y, keypoint, conf
+    
+
+
+
+
+
 def testDaSiamTracking(video_fname=VIDEO_FILE):
     # import the tracker
     from libs.DaSiamRPN.code import SiamRPN_tracker# this takes a while
