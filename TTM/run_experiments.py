@@ -15,9 +15,9 @@ IMG_SHAPE = (128, 128)
 class DaSiamShiftSearch():
     def __init__(self):
         self.tracker = None
-        self.is_lost = False
+        self.was_lost = False
         self.last_keypoint = None
-
+        self.FINGER_CONF = 0.7
 
     def convert_numpy(self, numpy_data):
         ORDERED_KEYPOINTS_HAND =[
@@ -52,8 +52,8 @@ class DaSiamShiftSearch():
                 output[ID] = finger
         return output
     
-    def move_region(self):
-        if self.tracker.isLost() and not was_lost: # the tracker is lost
+    def move_region(self, current_keypoints):
+        if self.tracker.isLost() and not self.was_lost: # the tracker is lost
             #find the nearest point by getting the location
             tracker_location = self.tracker.getLocation()
             # doing this iteratives just to avoid errors
@@ -61,7 +61,7 @@ class DaSiamShiftSearch():
             best_joint = None
             best_location = None
             for joint, (x, y, conf) in current_keypoints.items():
-                if conf < FINGER_CONF:
+                if conf < self.FINGER_CONF:
                     continue # just skip this one
                 keypoint_location = np.array([x, y])
                 print("key: {}, value {}".format(joint, (x,y,conf)))
@@ -77,30 +77,29 @@ class DaSiamShiftSearch():
                 #cv2.circle(frame, tuple([int(x) for x in best_location.tolist()]), 15, (255,255,255), 10)
             was_lost = True
     
-        elif self.tracker.isLost() and was_lost:
+        elif self.tracker.isLost() and self.was_lost:
             # update the search region
             # find the best key in the dictionary
             if best_joint in current_keypoints: # this could be none or otherwise not present
                 x_y_conf = current_keypoints[best_joint] # the keypoint we were tracking
                 if x_y_conf[2] > FINGER_CONF: 
                     x_y = x_y_conf[:2]
-                    x_y += offset # validate this is the right direction
+                    x_y += self.offset # validate this is the right direction
                     #cv2.circle(frame, tuple([int(x) for x in x_y]), 15, (0,0,0), 10)
                     self.tracker.setSearchLocation(x_y)
     
-        elif not self.tracker.isLost() and not was_lost:
-            offset = None
-            was_lost = False
-            best_key = None
-            best_location = None
+        elif not self.tracker.isLost() and not self.was_lost:
+            self.offset = None
+            self.was_lost = False
+            self.best_key = None
+            self.best_location = None
         elif not self.tracker.isLost() and was_lost:
-            offset = None
-            was_lost = False
-            best_key = None
-            best_location = None
-    
-    
-    
+            self.offset = None
+            self.was_lost = False
+            self.best_key = None
+            self.best_location = None
+   
+
     def track_section(self, track, vid, outfile, set_search=False, numpy_files=None):
         initial_bbox = track.iloc[0][[1,2,3,4]].tolist()
         initial_bbox = tools.ltrb_to_tlbr(initial_bbox)
@@ -125,7 +124,8 @@ class DaSiamShiftSearch():
                 print(numpy_files[index])
                 keypoints = np.load(numpy_files[index])
                 keypoints_dict = self.convert_numpy(keypoints)
-    
+
+            self.move_region(keypoints_dict) # TODO check if this is working
     
             ltwh, score, crop_region = self.tracker.predict(frame)
             tlbr = tools.ltwh_to_tlbr(ltwh)
@@ -144,8 +144,8 @@ class DaSiamShiftSearch():
                         names=['ID', 'x1', 'y1', 'x2', 'y2', 'frame', 'active',
                         'class', 'NaN'], index_col=None)
             vid = cv2.VideoCapture('/home/drussel1/data/ADL/ADL_videos/P_{:02d}.MP4'.format(i))
-            #with open("/home/drussel1/dev/TTM/TTM/outputs/P_{:02d}.txt".format(i), "w") as outfile:
-            with open("test_track.csv", "w") as outfile:
+            with open("/home/drussel1/dev/TTM/TTM/outputs/P_{:02d}.txt".format(i), "w") as outfile:
+            #with open("test_track.csv", "w") as outfile:
                 #pdb.set_trace()
                 df.sort_values(by=['ID', 'frame'], inplace = True)
                  
@@ -157,7 +157,10 @@ class DaSiamShiftSearch():
     
 if __name__ == "__main__": 
     # creating thread 
-    DaSiamShiftSearch().run_video(1,2)
+    #DaSiamShiftSearch().run_video(1,6)
+    #DaSiamShiftSearch().run_video(6,11)
+    #DaSiamShiftSearch().run_video(11,16)
+    DaSiamShiftSearch().run_video(16,21)
     #run_video(6,11)
     #run_video(11,16)
     #run_video(16,21)
