@@ -114,37 +114,49 @@ class DaSiamShiftSearch():
         print(index)
         print(vid.get(1))
         ok, frame = vid.read()
-    
         self.tracker = SiamRPN_tracker.SiamRPN_tracker(frame, initial_bbox)
     
         while index <= final_index and ok:# the current frame 
             #this is where I want to update it to grab the numpy frame
-            if set_search:
-                assert(numpy_files is not None)
+            if set_search and index < len(numpy_files):
                 print(numpy_files[index])
                 keypoints = np.load(numpy_files[index])
                 keypoints_dict = self.convert_numpy(keypoints)
-
-            self.move_region(keypoints_dict) # TODO check if this is working
+ 
+                self.move_region(keypoints_dict) # TODO check if this is working
+            else:
+                if set_search: # clean up
+                    print("Missing numpy file, not setting the search region")
     
             ltwh, score, crop_region = self.tracker.predict(frame)
-            tlbr = tools.ltwh_to_tlbr(ltwh)
-            l, t, r, b = tools.tlbr_to_ltrb(tlbr)
-            outfile.write("{}, {}, {}, {}, {}, {}, {}, {}\n".format(obj_ID, l, t, r, b, int(vid.get(1)), 0, obj_class)) # TODO validate this line
+            WRITE_ADL=False
+            if WRITE_ADL:
+                tlbr = tools.ltwh_to_tlbr(ltwh)
+                l, t, r, b = tools.tlbr_to_ltrb(tlbr)
+                outfile.write("{}, {}, {}, {}, {}, {}, {}, {}\n".format(obj_ID, l, t, r, b, index, 0, obj_class)) # TODO validate this line
+            else:
+                x, y, w, h = ltwh # TODO check more
+                #'FrameId', 'Id', 'X', 'Y', 'Width', 'Height', 'Confidence', 'ClassId', 'Visibility'
+                outfile.write("{} {} {} {} {} {} {} {} 1\n".format(index, obj_ID, x, y, w, h, 1, 1)) # TODO add the class id
+
             ok, frame = vid.read()
             if frame is None:
                 break # this is just a messier way of doing the while check 
             index+=1
     
-    def run_video(self, start_vid, end_vid):# inclusive, exclusive
+    def run_video(self, start_vid, end_vid, output_folder):# inclusive, exclusive
+        if not os.path.isdir(output_folder):
+            os.system("mkdir -p {}".format(output_folder))
+
         for i in range(start_vid, end_vid):
             numpy_folder = '/home/drussel1/data/ADL/openpose_keypoints/keypoint_{:02d}/*.npy'.format(i)
             numpy_files = sorted(glob.glob(numpy_folder))
             df = pd.read_csv('/home/drussel1/data/ADL/ADL_annotations/object_annotation/object_annot_P_{:02d}.txt'.format(i), sep=' ', 
                         names=['ID', 'x1', 'y1', 'x2', 'y2', 'frame', 'active',
                         'class', 'NaN'], index_col=None)
+
             vid = cv2.VideoCapture('/home/drussel1/data/ADL/ADL_videos/P_{:02d}.MP4'.format(i))
-            with open("/home/drussel1/dev/TTM/TTM/outputs/P_{:02d}.txt".format(i), "w") as outfile:
+            with open(os.path.join(output_folder, "P_{:02d}.txt".format(i)), "w") as outfile:#TODO pass in as parameter
             #with open("test_track.csv", "w") as outfile:
                 #pdb.set_trace()
                 df.sort_values(by=['ID', 'frame'], inplace = True)
@@ -152,15 +164,19 @@ class DaSiamShiftSearch():
                 IDs = list(set(df['ID'].tolist()))
                 for ID in IDs:
                     track = df.loc[df['ID'] == ID]
-                    self.track_section(track, vid, outfile, True, numpy_files)
+
+                    self.track_section(track, vid, outfile, SET_SHIFT, numpy_files)
     
     
 if __name__ == "__main__": 
     # creating thread 
-    #DaSiamShiftSearch().run_video(1,6)
-    #DaSiamShiftSearch().run_video(6,11)
-    #DaSiamShiftSearch().run_video(11,16)
-    DaSiamShiftSearch().run_video(16,21)
+    OUTPUT_FOLDER = "/home/drussel1/dev/TTM/TTM/mot_output_shifted"
+    SET_SHIFT = True 
+
+    #DaSiamShiftSearch().run_video(1,6, OUTPUT_FOLDER)
+    #DaSiamShiftSearch().run_video(6,11, OUTPUT_FOLDER)
+    #DaSiamShiftSearch().run_video(11,16, OUTPUT_FOLDER)
+    DaSiamShiftSearch().run_video(16,21, OUTPUT_FOLDER)
     #run_video(6,11)
     #run_video(11,16)
     #run_video(16,21)
