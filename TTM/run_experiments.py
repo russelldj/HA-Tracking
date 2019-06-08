@@ -17,7 +17,7 @@ class DaSiamShiftSearch():
         self.tracker = None
         self.was_lost = False
         self.last_keypoint = None
-        self.FINGER_CONF = 0.7
+        self.FINGER_CONF = 0.2
 
     def convert_numpy(self, numpy_data):
         ORDERED_KEYPOINTS_HAND =[
@@ -98,12 +98,21 @@ class DaSiamShiftSearch():
             self.was_lost = False
             self.best_key = None
             self.best_location = None
-   
+
+
+    def visualize(self, frame, ltwh, score):
+        if IMSHOW:
+            cv2.rectangle(frame, (ltwh[0], ltwh[1]), (ltwh[0] + ltwh[2], ltwh[1] + ltwh[3]), (255,0,0) , 3)
+            cv2.putText(frame, "conf: {:03f}".format(score), (ltwh[0], ltwh[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
+            cv2.imshow("predicted location", frame)
+            cv2.waitKey(1)
+
 
     def track_section(self, track, vid, outfile, set_search=False, numpy_files=None):
         initial_bbox = track.iloc[0][[1,2,3,4]].tolist()
         initial_bbox = tools.ltrb_to_tlbr(initial_bbox)
         initial_bbox = tools.tlbr_to_ltwh(initial_bbox) # both are needed
+        initial_bbox *= 2 #ADL annotations are off by two I think
         index = track.iloc[0]["frame"]
         obj_class = track.iloc[0]["class"]
         obj_ID = track.iloc[0]["ID"]
@@ -130,6 +139,7 @@ class DaSiamShiftSearch():
     
             ltwh, score, crop_region = self.tracker.predict(frame)
             WRITE_ADL=False
+            self.visualize(frame, ltwh, score)
             if WRITE_ADL:
                 tlbr = tools.ltwh_to_tlbr(ltwh)
                 l, t, r, b = tools.tlbr_to_ltrb(tlbr)
@@ -145,6 +155,9 @@ class DaSiamShiftSearch():
             index+=1
     
     def run_video(self, start_vid, end_vid, output_folder):# inclusive, exclusive
+        fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+        self.video_writer = cv2.VideoWriter(OUTPUT_FILENAME, fourcc, FPS, (WIDTH, HEIGHT))
+
         if not os.path.isdir(output_folder):
             os.system("mkdir -p {}".format(output_folder))
 
@@ -170,12 +183,17 @@ class DaSiamShiftSearch():
     
 if __name__ == "__main__": 
     # creating thread 
-    OUTPUT_FOLDER = "/home/drussel1/dev/TTM/TTM/mot_output_shifted"
-    SET_SHIFT = True 
+    OUTPUT_FOLDER = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/scaled_right/shifted"
+    SET_SHIFT = True
 
-    #DaSiamShiftSearch().run_video(1,6, OUTPUT_FOLDER)
-    #DaSiamShiftSearch().run_video(6,11, OUTPUT_FOLDER)
-    #DaSiamShiftSearch().run_video(11,16, OUTPUT_FOLDER)
+    IMSHOW = False
+    OUTPUT_FILENAME = "test.avi"
+    FPS = 30
+    (WIDTH, HEIGHT) = (1280,960)
+
+    #DaSiamShiftSearch().run_video(1,5, OUTPUT_FOLDER)
+    #DaSiamShiftSearch().run_video(5,10, OUTPUT_FOLDER)
+    #DaSiamShiftSearch().run_video(10,16, OUTPUT_FOLDER)
     DaSiamShiftSearch().run_video(16,21, OUTPUT_FOLDER)
     #run_video(6,11)
     #run_video(11,16)
