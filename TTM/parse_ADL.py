@@ -120,21 +120,34 @@ def get_all_classes():
     assert(combination == unique_objects)
 
 if __name__ == "__main__":
-    run_remove_imovable()
-    exit()
-    WRITE_OUT_GTS = False
-    PRED_OUT = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/filtered/shifted" 
+    #run_remove_imovable()
+    #exit()
+    pdb.set_trace()
+    WRITE_OUT_GTS = True
+    PRED_IN = "/home/drussel1/dev/TTM/TTM/data/CVPR/scaled_right/shifted_0.2" 
+    GT_OUT = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/ground_truths/movable"
+    REMOVE_IMOVABLE = True
+
+    if REMOVE_IMOVABLE:
+        PRED_OUT = "{}_filtered_movable".format(PRED_IN)
+    else:
+        PRED_OUT = "{}_filtered".format(PRED_IN)
+
     if not os.path.isdir(PRED_OUT):
         os.system("mkdir -p {}".format(PRED_OUT))
     for i in range(1, 21):
         GT_IN = "/home/drussel1/data/ADL/ADL_annotations/just_object_annotations/object_annot_P_{:02d}.txt".format(i)
-        PRED_IN = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/scaled_right/shifted/P_{:02d}.txt".format(i)
-        gt = ADL_to_MOT(load_ADL(GT_IN))
-        pred = load_MOT(PRED_IN)
+        pred_in_file = "{}/P_{:02d}.txt".format(PRED_IN, i)
+        pred = load_MOT(pred_in_file)
+        if REMOVE_IMOVABLE:
+            ADL_gt = load_ADL(GT_IN)
+            gt, pred = remove_imovable_objects(ADL_gt, pred)# TODO filter these again to get only the ones which line up
+        else:
+            gt = ADL_to_MOT(load_ADL(GT_IN))
         filtered_pred = remove_intermediate_frames(gt, pred)
         filtered_pred.to_csv(os.path.join(PRED_OUT, "P_{:02d}.txt".format(i)), sep=" ", header=False, index=False)
         if WRITE_OUT_GTS:
-            GT_OUT = "/home/drussel1/data/ADL/final_CVPR/MOT_format_ADL_GT/P_{:02d}/gt/".format(i)
-            if not os.path.isdir(GT_OUT):
-                os.system("mkdir -p {}".format(GT_OUT))
-            MOT_format.to_csv(os.path.join(OUTFOLDER, "gt.txt"), sep=" ", header=False, index=False) # don't write a header or index column
+            gt_out = "{}/P_{:02d}/gt/".format(GT_OUT, i)
+            if not os.path.isdir(gt_out):
+                os.system("mkdir -p {}".format(gt_out))
+            gt.to_csv(os.path.join(gt_out, "gt.txt"), sep=" ", header=False, index=False) # don't write a header or index column
