@@ -123,6 +123,81 @@ class KeypointVisualization:
             cv2.circle(im, (int(x), int(y)), 1 , color, getKeypointSize(i))
         return im
 
+    def PlotSingleFrameFromAndKeypointDict(self, im, keypoint_dict, vis_conf): # TODO
+        """
+        im : np.array
+            The image to visualize on top of
+        frame_num : int
+            The frame index to acquire the keypoints with
+        """
+        connections = np.asarray([[0,1],  [1,2],  [2,3],  [3,4],  [0,5],  [5,6],  [6,7],  [7,8],  [0,9],  [9,10],  [10,11],  [11,12],  [0,13],  [13,14],  [14,15],  [15,16],  [0,17],  [17,18],  [18,19],  [19,20]])
+        colors = np.flip(np.asarray([[100,  100,  100],
+        [100,    0,    0],
+        [150,    0,    0],
+        [200,    0,    0],
+        [255,    0,    0],
+        [100,  100,    0],
+        [150,  150,    0],
+        [200,  200,    0],
+        [255,  255,    0],
+        [0,  100,   50],
+        [0,  150,   75],
+        [0,  200,  100],
+        [0,  255,  125],
+        [0,   50,  100],
+        [0,   75,  150],
+        [0,  100,  200],
+        [0,  125,  255],
+        [100,    0,  100],
+        [150,    0,  150],
+        [200,    0,  200],
+        [255,    0,  255]], dtype=np.uint8), axis=1)
+        num_points = len(self.ordered_keypoints)
+
+
+        #left_keypoints  = dict([(key[(1+len("left")):], value) for key, value in keypoint_dict.items() if 'left' in key])
+        #right_keypoints = dict([(key[(1+len("right")):], value) for key, value in keypoint_dict.items() if 'right' in key])
+        #if not len(left_keypoints) + len(right_keypoints) == len(keypoint_dict):
+        #    pdb.set_trace()
+
+        def getKeypointSize(keypoint_ind):
+            # Makes the hands be plotted smaller
+            return 7 if keypoint_ind < 25 else 3
+
+        #Plot the hand points
+        for i in range(num_points):
+            key = self.ordered_keypoints[i]
+            if key in keypoint_dict:
+                x, y, conf = keypoint_dict[key]  # TODO threshold on conf
+                if conf < vis_conf: # don't visualize if it's not high confidence
+                    continue
+            else:
+                continue # go to the next itteration because the keypoint is not in this frame
+            color_ind = (i - 25) % 21
+            #print(color_ind)
+            color = colors[color_ind, :]
+            cv2.circle(im, (int(x), int(y)), 1 , color.tolist(), 15)
+
+        # Plot the connections, i. e. fingers
+
+        for connection in connections:
+            for side in [0, 1]:
+                offset = side * 21 + 25 # shift by the correct number of points in the array
+                key1 = self.ordered_keypoints[connection[0] + offset]
+                key2 = self.ordered_keypoints[connection[1] + offset]
+                if key1 in keypoint_dict and key2 in keypoint_dict:
+                    x1, y1, conf1 = keypoint_dict[key1] 
+                    x2, y2, conf2 = keypoint_dict[key2] 
+                    if conf1 < self.VIS_CONF or conf2 < self.VIS_CONF: # don't visualize if it's not high confidence
+                        continue
+                else:
+                    continue # go to the next itteration because the keypoint is not in this frame
+                color = colors[connection[0],:].tolist() # get the color of the first point
+                cv2.line(im, (int(x1), int(y1)), (int(x2), int(y2)), color, self.FINGER_THICKNESS) # repeat the last color
+
+        return im
+
+
     def PlotSingleFrameFromIndOpenCVOpenPose(self, im, frame_num):
         """
         im : np.array

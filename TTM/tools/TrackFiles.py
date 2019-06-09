@@ -53,25 +53,6 @@ def remove_intermediate_frames(gt, pred):
     pred = pred[indexing]
     return pred
 
-def run_remove_imovable():
-    WRITE_OUT_GTS = True
-    PRED_OUT = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/no_imovables/not_shifted_BAD" 
-    if not os.path.isdir(PRED_OUT):
-        os.system("mkdir -p {}".format(PRED_OUT))
-    for i in range(1, 21):
-        GT_IN = "/home/drussel1/data/ADL/ADL_annotations/just_object_annotations/object_annot_P_{:02d}.txt".format(i)
-        PRED_IN = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/scaled_wrong/not_shifted/P_{:02d}.txt".format(i)
-        ADL_gt = load_ADL(GT_IN)
-        pred = load_MOT(PRED_IN)
-        gt, pred = remove_imovable_objects(ADL_gt, pred)# TODO filter these again to get only the ones which line up
-        pred = remove_intermediate_frames(gt, pred)
-
-        pred.to_csv(os.path.join(PRED_OUT, "P_{:02d}.txt".format(i)), sep=" ", header=False, index=False)
-        if WRITE_OUT_GTS:
-            GT_OUT = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/no_imovables/gt/P_{:02d}/gt/".format(i)
-            if not os.path.isdir(GT_OUT):
-                os.system("mkdir -p {}".format(GT_OUT))
-            gt.to_csv(os.path.join(GT_OUT, "gt.txt"), sep=" ", header=False, index=False) # don't write a header or index column
 
 def remove_imovable_objects(gt_ADL, pred):
     """
@@ -118,36 +99,3 @@ def get_all_classes():
     combination = movable | not_movable
     pdb.set_trace()
     assert(combination == unique_objects)
-
-if __name__ == "__main__":
-    #run_remove_imovable()
-    #exit()
-    pdb.set_trace()
-    WRITE_OUT_GTS = False
-    PRED_IN = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/scaled_right/unshifted" 
-    GT_OUT = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/ground_truths/movable"
-    REMOVE_IMOVABLE = True
-
-    if REMOVE_IMOVABLE:
-        PRED_OUT = "{}_filtered_movable".format(PRED_IN)
-    else:
-        PRED_OUT = "{}_filtered".format(PRED_IN)
-
-    if not os.path.isdir(PRED_OUT):
-        os.system("mkdir -p {}".format(PRED_OUT))
-    for i in range(1, 21):
-        GT_IN = "/home/drussel1/data/ADL/ADL_annotations/just_object_annotations/object_annot_P_{:02d}.txt".format(i)
-        pred_in_file = "{}/P_{:02d}.txt".format(PRED_IN, i)
-        pred = load_MOT(pred_in_file)
-        if REMOVE_IMOVABLE:
-            ADL_gt = load_ADL(GT_IN)
-            gt, pred = remove_imovable_objects(ADL_gt, pred)# TODO filter these again to get only the ones which line up
-        else:
-            gt = ADL_to_MOT(load_ADL(GT_IN))
-        filtered_pred = remove_intermediate_frames(gt, pred)
-        filtered_pred.to_csv(os.path.join(PRED_OUT, "P_{:02d}.txt".format(i)), sep=" ", header=False, index=False)
-        if WRITE_OUT_GTS:
-            gt_out = "{}/P_{:02d}/gt/".format(GT_OUT, i)
-            if not os.path.isdir(gt_out):
-                os.system("mkdir -p {}".format(gt_out))
-            gt.to_csv(os.path.join(gt_out, "gt.txt"), sep=" ", header=False, index=False) # don't write a header or index column

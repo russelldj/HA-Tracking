@@ -7,6 +7,7 @@ import threading
 from tools import tools, KeypointVisualization, KeypointCapture
 from libs.DaSiamRPN.code import SiamRPN_tracker# this takes a while
 import glob
+import argparse
 
 VIDEO_FILE = 'ADL_videos/P_{:02d}.MP4'
 OUTPUT_FOLDER = 'ADL_Market_format/all_bounding_boxes' # TODO check this 
@@ -17,7 +18,7 @@ class DaSiamShiftSearch():
         self.tracker = None
         self.was_lost = False
         self.last_keypoint = None
-        self.FINGER_CONF = 0.2 # TODO choose this more appropriately
+        self.FINGER_CONF = 0.1 # TODO choose this more appropriately
         self.visualizer = KeypointVisualization.KeypointVisualization(KeypointCapture.KeypointCapture())
 
     def convert_numpy(self, numpy_data):
@@ -58,8 +59,8 @@ class DaSiamShiftSearch():
             #find the nearest point by getting the location
             tracker_location = self.tracker.getLocation()
             # doing this iteratives just to avoid errors
-            shortest_dist = np.inf
-            best_joint = None
+            self.best_joint = None 
+            shortest_dist = np.inf # TODO threshold on this
             best_location = None
             for joint, (x, y, conf) in current_keypoints.items():
                 if conf < self.FINGER_CONF:
@@ -68,22 +69,21 @@ class DaSiamShiftSearch():
                 print("key: {}, value {}".format(joint, (x,y,conf)))
                 dist = np.linalg.norm(tracker_location - keypoint_location)
                 if dist < shortest_dist:
-                    best_joint = joint
+                    self.best_joint = joint
                     best_location = keypoint_location
                     shortest_dist = dist
-                offset = tracker_location - best_location # TODO determine if this is what we really want
+                self.offset = tracker_location - best_location # TODO determine if this is what we really want
     
             if best_location is not None: # check if this was actually set
-                pass
                 #cv2.circle(frame, tuple([int(x) for x in best_location.tolist()]), 15, (255,255,255), 10)
-            was_lost = True
+                self.was_lost = True # only do this if you find a keypoint
     
         elif self.tracker.isLost() and self.was_lost:
             # update the search region
             # find the best key in the dictionary
-            if best_joint in current_keypoints: # this could be none or otherwise not present
-                x_y_conf = current_keypoints[best_joint] # the keypoint we were tracking
-                if x_y_conf[2] > FINGER_CONF: 
+            if self.best_joint in current_keypoints: # this could be none or otherwise not present
+                x_y_conf = current_keypoints[self.best_joint] # the keypoint we were tracking
+                if x_y_conf[2] > self.FINGER_CONF: 
                     x_y = x_y_conf[:2]
                     x_y += self.offset # validate this is the right direction
                     #cv2.circle(frame, tuple([int(x) for x in x_y]), 15, (0,0,0), 10)
@@ -94,7 +94,7 @@ class DaSiamShiftSearch():
             self.was_lost = False
             self.best_key = None
             self.best_location = None
-        elif not self.tracker.isLost() and was_lost:
+        elif not self.tracker.isLost() and self.was_lost:
             self.offset = None
             self.was_lost = False
             self.best_key = None
@@ -136,12 +136,13 @@ class DaSiamShiftSearch():
                 keypoints_dict = self.convert_numpy(keypoints)
                 self.move_region(keypoints_dict) # TODO check if this is working
             else:
+                keypoints_dict = {}
                 if set_search: # clean up
                     print("Missing numpy file, not setting the search region")
     
             ltwh, score, crop_region = self.tracker.predict(frame)
-            WRITE_ADL=False
             self.visualize(frame, ltwh, score, keypoints_dict)
+            WRITE_ADL=False
             if WRITE_ADL:
                 tlbr = tools.ltwh_to_tlbr(ltwh)
                 l, t, r, b = tools.tlbr_to_ltrb(tlbr)
@@ -182,7 +183,13 @@ class DaSiamShiftSearch():
                     track = df.loc[df['ID'] == ID]
 
                     self.track_section(track, vid, outfile, SET_SHIFT, numpy_files)
-    
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("start", type=int)
+    parser.add_argument("stop", type=int)
+    args = parser.parse_args()
+    return args
     
 if __name__ == "__main__": 
     # creating thread 
@@ -193,10 +200,10 @@ if __name__ == "__main__":
     OUTPUT_FILENAME = "test.avi"
     FPS = 30
     (WIDTH, HEIGHT) = (1280,960)
+    args = parse_args()
 
-    #DaSiamShiftSearch().run_video(3,5, OUTPUT_FOLDER)
+    DaSiamShiftSearch().run_video(args.start,args.stop, OUTPUT_FOLDER)
+    #DaSiamShiftSearch().run_video(5,10, OUTPUT_FOLDER)
+    #DaSiamShiftSearch().run_video(10,15, OUTPUT_FOLDER)
+    #DaSiamShiftSearch().run_video(15,21, OUTPUT_FOLDER)
 
-    #DaSiamShiftSearch().run_video(1,4, OUTPUT_FOLDER)
-    #DaSiamShiftSearch().run_video(4,10, OUTPUT_FOLDER)
-    #DaSiamShiftSearch().run_video(10,16, OUTPUT_FOLDER)
-    DaSiamShiftSearch().run_video(16,21, OUTPUT_FOLDER)
