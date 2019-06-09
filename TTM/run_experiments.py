@@ -4,12 +4,12 @@ import numpy as np
 import os
 import pdb
 import threading
-from tools import tools
+from tools import tools, KeypointVisualization, KeypointCapture
 from libs.DaSiamRPN.code import SiamRPN_tracker# this takes a while
 import glob
 
 VIDEO_FILE = 'ADL_videos/P_{:02d}.MP4'
-OUTPUT_FOLDER = 'ADL_Market_format/all_bounding_boxes'
+OUTPUT_FOLDER = 'ADL_Market_format/all_bounding_boxes' # TODO check this 
 IMG_SHAPE = (128, 128)
 
 class DaSiamShiftSearch():
@@ -17,33 +17,34 @@ class DaSiamShiftSearch():
         self.tracker = None
         self.was_lost = False
         self.last_keypoint = None
-        self.FINGER_CONF = 0.2
+        self.FINGER_CONF = 0.2 # TODO choose this more appropriately
+        self.visualizer = KeypointVisualization.KeypointVisualization(KeypointCapture.KeypointCapture())
 
     def convert_numpy(self, numpy_data):
         ORDERED_KEYPOINTS_HAND =[
                   "Wrist",
-                    "Thumb1",
-                      "Thumb2",
-                        "Thumb3",
-                          "Thumb4",
-                            "Index1",
-                              "Index2",
-                                "Index3",
-                                  "Index4",
-                                    "Middle1",
-                                      "Middle2",
-                                        "Middle3",
-                                          "Middle4",
-                                            "Ring1",
-                                              "Ring2",
-                                                "Ring3",
-                                                  "Ring4",
-                                                    "Pinky1",
-                                                      "Pinky2",
-                                                        "Pinky3",
-                                                          "Pinky4"
+                  "Thumb1",
+                    "Thumb2",
+                      "Thumb3",
+                        "Thumb4",
+                          "Index1",
+                            "Index2",
+                              "Index3",
+                                "Index4",
+                                  "Middle1",
+                                    "Middle2",
+                                      "Middle3",
+                                        "Middle4",
+                                          "Ring1",
+                                            "Ring2",
+                                              "Ring3",
+                                                "Ring4",
+                                                  "Pinky1",
+                                                    "Pinky2",
+                                                      "Pinky3",
+                                                        "Pinky4"
                                                         ]
-        HANDS = ["left", "right"]
+        HANDS = ["Left", "Right"]
         assert(numpy_data.shape == (2, 1, 21, 3))
         output = dict()
         for which_hand, hand in enumerate(numpy_data):
@@ -53,7 +54,7 @@ class DaSiamShiftSearch():
         return output
     
     def move_region(self, current_keypoints):
-        if self.tracker.isLost() and not self.was_lost: # the tracker is lost
+        if self.tracker.isLost() and not self.was_lost: # the tracker is lost for the first time
             #find the nearest point by getting the location
             tracker_location = self.tracker.getLocation()
             # doing this iteratives just to avoid errors
@@ -70,7 +71,7 @@ class DaSiamShiftSearch():
                     best_joint = joint
                     best_location = keypoint_location
                     shortest_dist = dist
-                offset = tracker_location - best_location
+                offset = tracker_location - best_location # TODO determine if this is what we really want
     
             if best_location is not None: # check if this was actually set
                 pass
@@ -100,12 +101,14 @@ class DaSiamShiftSearch():
             self.best_location = None
 
 
-    def visualize(self, frame, ltwh, score):
+    def visualize(self, frame, ltwh, score, keypoint_dict):
         if IMSHOW:
+            frame = self.visualizer.PlotSingleFrameFromAndKeypointDict(frame, keypoint_dict, self.FINGER_CONF)
             cv2.rectangle(frame, (ltwh[0], ltwh[1]), (ltwh[0] + ltwh[2], ltwh[1] + ltwh[3]), (255,0,0) , 3)
             cv2.putText(frame, "conf: {:03f}".format(score), (ltwh[0], ltwh[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
             cv2.imshow("predicted location", frame)
             cv2.waitKey(1)
+            
 
 
     def track_section(self, track, vid, outfile, set_search=False, numpy_files=None):
@@ -131,7 +134,6 @@ class DaSiamShiftSearch():
                 print(numpy_files[index])
                 keypoints = np.load(numpy_files[index])
                 keypoints_dict = self.convert_numpy(keypoints)
- 
                 self.move_region(keypoints_dict) # TODO check if this is working
             else:
                 if set_search: # clean up
@@ -139,7 +141,7 @@ class DaSiamShiftSearch():
     
             ltwh, score, crop_region = self.tracker.predict(frame)
             WRITE_ADL=False
-            self.visualize(frame, ltwh, score)
+            self.visualize(frame, ltwh, score, keypoints_dict)
             if WRITE_ADL:
                 tlbr = tools.ltwh_to_tlbr(ltwh)
                 l, t, r, b = tools.tlbr_to_ltrb(tlbr)
@@ -157,7 +159,8 @@ class DaSiamShiftSearch():
     def run_video(self, start_vid, end_vid, output_folder):# inclusive, exclusive
         fourcc = cv2.VideoWriter_fourcc(*"MJPG")
         self.video_writer = cv2.VideoWriter(OUTPUT_FILENAME, fourcc, FPS, (WIDTH, HEIGHT))
-
+        if SET_SHIFT:
+            output_folder = "{}_{}".format(output_folder, self.FINGER_CONF)
         if not os.path.isdir(output_folder):
             os.system("mkdir -p {}".format(output_folder))
 
@@ -184,37 +187,16 @@ class DaSiamShiftSearch():
 if __name__ == "__main__": 
     # creating thread 
     OUTPUT_FOLDER = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/scaled_right/shifted"
+    #OUTPUT_FOLDER = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/temp"
     SET_SHIFT = True
-
     IMSHOW = False
     OUTPUT_FILENAME = "test.avi"
     FPS = 30
     (WIDTH, HEIGHT) = (1280,960)
 
-    #DaSiamShiftSearch().run_video(1,5, OUTPUT_FOLDER)
-    #DaSiamShiftSearch().run_video(5,10, OUTPUT_FOLDER)
+    #DaSiamShiftSearch().run_video(3,5, OUTPUT_FOLDER)
+
+    #DaSiamShiftSearch().run_video(1,4, OUTPUT_FOLDER)
+    #DaSiamShiftSearch().run_video(4,10, OUTPUT_FOLDER)
     #DaSiamShiftSearch().run_video(10,16, OUTPUT_FOLDER)
     DaSiamShiftSearch().run_video(16,21, OUTPUT_FOLDER)
-    #run_video(6,11)
-    #run_video(11,16)
-    #run_video(16,21)
-    #for i in range(3,6,2):
-    #    all_threads.append(threading.Thread(target=run_video, args=(i,i+2)))
-
-    #for a_thread in all_threads:
-    #    a_thread.start()
-
-    #for a_thread in all_threads:
-    #    a_thread.join()
-
-  
-    #for index, row in df.iterrows():
-    #       print(row['frame'])
-    #       cap.set(1, row['frame'])
-    #       ret, img = cap.read()
-    #       if not ret:
-    #           break
-    #       crop = img[2*row['y1']:2*row['y2'],2*row['x1']:2*row['x2']].copy()
-    #       crop = cv2.resize(crop, IMG_SHAPE, cv2.INTER_CUBIC)  
-    #       print(crop.shape)
-    #       cv2.imwrite('{}/{:02d}{:04d}_c1s1_{}_00.jpg'.format(OUTPUT_FOLDER, i, row['ID'], row['frame']), crop)
