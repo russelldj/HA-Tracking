@@ -18,7 +18,8 @@ class DaSiamShiftSearch():
         self.tracker = None
         self.was_lost = False
         self.last_keypoint = None
-        self.FINGER_CONF = 0.1 # TODO choose this more appropriately
+        self.FINGER_CONF = 0.4 # TODO choose this more appropriately
+        self.DIST_THRESHOLD = 50 # TODO choose this more appropriately
         self.visualizer = KeypointVisualization.KeypointVisualization(KeypointCapture.KeypointCapture())
 
     def convert_numpy(self, numpy_data):
@@ -57,10 +58,10 @@ class DaSiamShiftSearch():
     def move_region(self, current_keypoints):
         if self.tracker.isLost() and not self.was_lost: # the tracker is lost for the first time
             #find the nearest point by getting the location
-            tracker_location = self.tracker.getLocation()
+            tracker_location = self.tracker.getLocation() # TODO make sure that this is the center of the output
             # doing this iteratives just to avoid errors
             self.best_joint = None 
-            shortest_dist = np.inf # TODO threshold on this
+            shortest_dist = self.DIST_THRESHOLD # TODO threshold on this
             best_location = None
             for joint, (x, y, conf) in current_keypoints.items():
                 if conf < self.FINGER_CONF:
@@ -72,13 +73,13 @@ class DaSiamShiftSearch():
                     self.best_joint = joint
                     best_location = keypoint_location
                     shortest_dist = dist
-                self.offset = tracker_location - best_location # TODO determine if this is what we really want
+                    self.offset = tracker_location - best_location # TODO determine if this is what we really want
     
             if best_location is not None: # check if this was actually set
                 #cv2.circle(frame, tuple([int(x) for x in best_location.tolist()]), 15, (255,255,255), 10)
                 self.was_lost = True # only do this if you find a keypoint
     
-        elif self.tracker.isLost() and self.was_lost:
+        elif self.tracker.isLost() and self.was_lost: # TODO if it's not there, find another one which is the closest
             # update the search region
             # find the best key in the dictionary
             if self.best_joint in current_keypoints: # this could be none or otherwise not present
@@ -86,8 +87,10 @@ class DaSiamShiftSearch():
                 if x_y_conf[2] > self.FINGER_CONF: 
                     x_y = x_y_conf[:2]
                     x_y += self.offset # validate this is the right direction
-                    #cv2.circle(frame, tuple([int(x) for x in x_y]), 15, (0,0,0), 10)
                     self.tracker.setSearchLocation(x_y)
+                    # maybe shift it differently if the nearest on isn't present
+
+
     
         elif not self.tracker.isLost() and not self.was_lost:
             self.offset = None
@@ -161,7 +164,7 @@ class DaSiamShiftSearch():
         fourcc = cv2.VideoWriter_fourcc(*"MJPG")
         self.video_writer = cv2.VideoWriter(OUTPUT_FILENAME, fourcc, FPS, (WIDTH, HEIGHT))
         if SET_SHIFT:
-            output_folder = "{}_{}".format(output_folder, self.FINGER_CONF)
+            output_folder = os.path.join(output_folder, "{}_{}_{}".format(SET_SHIFT, self.FINGER_CONF, self.DIST_THRESHOLD))
         if not os.path.isdir(output_folder):
             os.system("mkdir -p {}".format(output_folder))
 
@@ -193,7 +196,7 @@ def parse_args():
     
 if __name__ == "__main__": 
     # creating thread 
-    OUTPUT_FOLDER = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/scaled_right/shifted"
+    OUTPUT_FOLDER = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/6_9_runs"
     #OUTPUT_FOLDER = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/temp"
     SET_SHIFT = True
     IMSHOW = False
