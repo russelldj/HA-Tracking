@@ -10,3 +10,9 @@
 [submodule "TTM/libs/ubelt"]
 	path = TTM/libs/ubelt
 	url = git@github.com:russelldj/ubelt.git
+[submodule "TTM/libs/Detectron"]
+	path = TTM/libs/Detectron
+	url = git@github.com:facebookresearch/Detectron.git
+[submodule "TTM/libs/py-motmetrics"]
+	path = TTM/libs/py-motmetrics
+	url = git@github.com:cheind/py-motmetrics.git
