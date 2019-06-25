@@ -16,3 +16,6 @@
 [submodule "TTM/libs/py-motmetrics"]
 	path = TTM/libs/py-motmetrics
 	url = git@github.com:cheind/py-motmetrics.git
+[submodule "TTM/libs/SiamMask"]
+	path = TTM/libs/SiamMask
+	url = git@github.com:russelldj/SiamMask.git
