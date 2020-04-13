@@ -8,3 +8,9 @@ Make sure that when you clone you do `git clone --recursive` as there are includ
 I am
 
 Download the data from: https://www.csee.umbc.edu/~hpirsiav/papers/ADLdataset/
+
+# Useful
+`HATracking/parse_ADL.py` convert from the ADL format to MOT15
+
+# Dependancies
+ pip install pymotmetrics
