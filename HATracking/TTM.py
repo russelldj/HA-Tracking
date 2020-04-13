@@ -18,7 +18,7 @@ KEYPOINTS_FILE = "./data/TTM-data/processed/EIMP/Mask-Guided-Keypoints-Zero-Padd
 START_FRAME = 300
 
 def computeOpenPoseKeypoints():
-    sys.path.append('libs/openpose/build/python');    
+    sys.path.append('libs/openpose/build/python');
     from openpose import pyopenpose as op
     print(op)
 
@@ -37,7 +37,7 @@ def trackingFromNpy():
     # set the initial region and frame
     # read in the proper numpy array
     # convert it to the x, y, keypoint, conf
-    
+
 
 
 
@@ -69,14 +69,14 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
     score = 1
     toc = 0
     frame_num = args.start_frame
-    
+
     # create the visualizer
     fourcc = cv2.VideoWriter_fourcc(*"MJPG")
     video_writer = cv2.VideoWriter(OUTPUT_FILENAME, fourcc, FPS, (WIDTH, HEIGHT))
     video_reader = cv2.VideoCapture(args.video_file)
     video_reader.set(1, frame_num)
     ok, frame = video_reader.read()
-    
+
     # choose the initial region
     if SELECT_REGION:
         ltwh = list(cv2.selectROI(frame))
@@ -87,7 +87,7 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
     track_1_diff_xy = [0.0, 0.0]
     cv2.destroyAllWindows()
     # create a wrapper around the tracker
-    tracker = SiamRPN_tracker.SiamRPN_tracker(frame, ltwh) 
+    tracker = SiamRPN_tracker.SiamRPN_tracker(frame, ltwh)
     tracker.setSearchRegion(ltwh)
 
     if SET_SEARCH:
@@ -129,7 +129,7 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
                 # find the best key in the dictionary
                 if best_joint in current_keypoints: # this could be none or otherwise not present
                     x_y_conf = current_keypoints[best_joint] # the keypoint we were tracking
-                    if x_y_conf[2] > FINGER_CONF: 
+                    if x_y_conf[2] > FINGER_CONF:
                         x_y = x_y_conf[:2]
                         x_y += offset # validate this is the right direction
                         #cv2.circle(frame, tuple([int(x) for x in x_y]), 15, (0,0,0), 10)
@@ -150,7 +150,7 @@ def testDaSiamTracking(video_fname=VIDEO_FILE):
             # Check if the tracker is lost
             # if it is, find the nearest point
             # track that point
-            # that is, find the point in the next frame which is closer to the location of the ones which have that id  
+            # that is, find the point in the next frame which is closer to the location of the ones which have that id
             #if FINGER in current_keypoints and current_keypoints[FINGER][2] != 0:
             #    right_index = current_keypoints[FINGER]
             #    #print("the confs are {}".format([x[2] for x in current_keypoints.values()]))
@@ -207,4 +207,3 @@ if __name__ == "__main__":
     testDaSiamTracking()
     #FullTracking()
     #computeOpenPoseKeypoints()
-

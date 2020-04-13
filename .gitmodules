@@ -1,9 +1,6 @@
 [submodule "TTM/libs/openpose"]
 	path = HATracking/libs/openpose
 	url = https://github.com/CMU-Perceptual-Computing-Lab/openpose.git
-[submodule "TTM/data/TTM-data"]
-	path = TTM/data/TTM-data
-	url = git@github.com:russelldj/TTM-data.git
 [submodule "TTM/libs/DaSiamRPN"]
 	path = HATracking/libs/DaSiamRPN
 	url = git@github.com:russelldj/DaSiamRPN.git
