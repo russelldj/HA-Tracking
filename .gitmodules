@@ -1,21 +1,21 @@
 [submodule "TTM/libs/openpose"]
-	path = TTM/libs/openpose
+	path = HATracking/libs/openpose
 	url = https://github.com/CMU-Perceptual-Computing-Lab/openpose.git
 [submodule "TTM/data/TTM-data"]
 	path = TTM/data/TTM-data
 	url = git@github.com:russelldj/TTM-data.git
 [submodule "TTM/libs/DaSiamRPN"]
-	path = TTM/libs/DaSiamRPN
+	path = HATracking/libs/DaSiamRPN
 	url = git@github.com:russelldj/DaSiamRPN.git
 [submodule "TTM/libs/ubelt"]
-	path = TTM/libs/ubelt
+	path = HATracking/libs/ubelt
 	url = git@github.com:russelldj/ubelt.git
 [submodule "TTM/libs/Detectron"]
-	path = TTM/libs/Detectron
+	path = HATracking/libs/Detectron
 	url = git@github.com:facebookresearch/Detectron.git
 [submodule "TTM/libs/py-motmetrics"]
-	path = TTM/libs/py-motmetrics
+	path = HATracking/libs/py-motmetrics
 	url = git@github.com:cheind/py-motmetrics.git
 [submodule "TTM/libs/SiamMask"]
-	path = TTM/libs/SiamMask
+	path = HATracking/libs/SiamMask
 	url = git@github.com:russelldj/SiamMask.git
