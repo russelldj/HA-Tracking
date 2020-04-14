@@ -2,6 +2,8 @@ import pandas as pd
 import pdb
 import os
 import numpy as np
+from scipy import interpolate
+import matplotlib.pyplot as plt
 
 
 def load_ADL(fname):
@@ -221,3 +223,89 @@ def get_all_classes():
     combination = movable | not_movable
     pdb.set_trace()
     assert(combination == unique_objects)
+
+
+def interpolate_MOT(df, method="cubic"):
+    """
+    fill in the blanks between frames
+
+    df : pd.dataframe
+        The MOT annotations
+    method : str
+        The method of interpolation. linear is the only one supported right now
+    """
+    interpolated_tracks = []
+
+    print(df)
+    track_IDs = df['Id']
+    for track_ID in track_IDs.unique():
+        track_inds = (track_IDs == track_ID).values
+        one_track = df.iloc[track_inds, :]
+        interpolated_tracks.append(interpolate_track(one_track, method=method))
+    all_tracks = pd.concat(interpolated_tracks)
+    print(all_tracks)
+    return all_tracks
+
+
+def interpolate_track(track, method="cubic", vis=False):
+    """
+    Interpolate a dataframe containing a single track
+
+    track : pd.DataFrame
+        A dataframe containing a single track
+    method : str
+        Interplation method, "linear" or "cubic"
+    vis : bool
+        Should you plot interpolation
+    """
+    # sort the track by frame ID or at least check that that's the case
+    if len(track) <= 1:
+        return track
+
+    frame_Ids = track['FrameId'].values
+    start = np.min(frame_Ids)
+    end = np.max(frame_Ids)
+    # The places we'll interpolate, all the frame values
+    sampling_locations = np.arange(start, end+1)
+
+    X1 = track['X'].values
+    Y1 = track['Y'].values
+    X2 = X1 + track['Width'].values
+    Y2 = Y1 + track['Height'].values
+    locs = np.vstack((X1, Y1, X2, Y2)).transpose()
+    if method == "linear":
+        f = interpolate.interp1d(frame_Ids, locs)
+    elif method == "cubic":
+        f = interpolate.CubicSpline(frame_Ids, locs)
+    else:
+        raise ValueError("Method : {} has not been implmented".format(method))
+
+    interpolated = f(sampling_locations)
+    if vis:
+        for i in range(4):
+            plt.plot(sampling_locations, interpolated[:, i])
+            plt.scatter(frame_Ids, locs[:, i])
+        plt.pause(2)
+
+    X1 = interpolated[:, 0]
+    Y1 = interpolated[:, 1]
+    W = interpolated[:, 2] - X1
+    H = interpolated[:, 3] - Y1
+    interpolated_track = pd.DataFrame({"X": X1.astype(int),
+                                       "Y": Y1.astype(int),
+                                       "Width": W.astype(int),
+                                       "Height": H.astype(int)})
+    confidence = track.Confidence.unique()
+    class_ID = track.ClassId.unique()
+    visibility = track.Visibility.unique()
+    Id = track.Id.unique()
+    if not (len(confidence) == 1 and len(class_ID) == 1
+            and len(visibility) == 1 and len(Id)):
+        raise ValueError("There is variation in over the course of the track")
+    interpolated_track["Confidence"] = confidence[0]
+    interpolated_track["ClassId"] = class_ID[0]
+    interpolated_track["Visibility"] = visibility[0]
+    interpolated_track["Id"] = Id[0]
+    interpolated_track["Visibility"] = visibility[0]
+    interpolated_track["FrameId"] = sampling_locations
+    return interpolated_track
