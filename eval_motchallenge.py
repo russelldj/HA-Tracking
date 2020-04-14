@@ -186,15 +186,13 @@ if __name__ == '__main__':
     mh = mm.metrics.create()
     accs, names = compare_dataframes(new_gt, new_ts)
     logging.info('Running metrics')
-    pdb.set_trace()
-
 
     print(mm.metrics)
     summary = mh.compute_many(accs, names=names, metrics=mm.metrics.motchallenge_metrics, generate_overall=True)
     rendered_summary = mm.io.render_summary(summary, formatters=mh.formatters, namemap=mm.io.motchallenge_metric_names)
     print(rendered_summary)
     print(args)
-    test_folder = os.path.split(test_dir)[-1]
+    test_folder = os.path.split(args.tests)[-1]
     score_file = OUTPUT_FORMAT_STRING.format(test_folder,
                     str(datetime.datetime.now()).replace(" ", ""))
     output_file = os.path.join(args.output_folder, score_file)
@@ -202,6 +200,5 @@ if __name__ == '__main__':
         outfile.write(rendered_summary)
         outfile.write("\n")
         outfile.write(str(args))
-        outfile.write(extension)
     logging.info('Completed')
     pdb.set_trace()

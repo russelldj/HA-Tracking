@@ -58,54 +58,60 @@ class DaSiamShiftSearch():
         self.FINGER_CONF = 0.4  # TODO choose this more appropriately
         self.DIST_THRESHOLD = 50  # TODO choose this more appropriately
         self.visualizer = KeypointVisualization.KeypointVisualization(
-                                            KeypointCapture.KeypointCapture())
+            KeypointCapture.KeypointCapture())
         self.video_writer = None
 
     def convert_numpy(self, numpy_data):
         assert(numpy_data.shape == (2, 1, 21, 3))
         output = dict()
         for which_hand, hand in enumerate(numpy_data):
-            for which_finger, finger in enumerate(hand[0]): #weird extra dimension
-                ID = "{}_{}".format(HANDS[which_hand], ORDERED_KEYPOINTS_HAND[which_finger])
+            for which_finger, finger in enumerate(
+                    hand[0]):  # weird extra dimension
+                ID = "{}_{}".format(
+                    HANDS[which_hand],
+                    ORDERED_KEYPOINTS_HAND[which_finger])
                 output[ID] = finger
         return output
 
     def move_region(self, current_keypoints):
-        if self.tracker.isLost() and not self.was_lost: # the tracker is lost for the first time
-            #find the nearest point by getting the location
-            tracker_location = self.tracker.getLocation() # TODO make sure that this is the center of the output
+        if self.tracker.isLost() and not self.was_lost:  # the tracker is lost for the first time
+            # find the nearest point by getting the location
+            # TODO make sure that this is the center of the output
+            tracker_location = self.tracker.getLocation()
             # doing this iteratives just to avoid errors
             self.best_joint = None
-            shortest_dist = self.DIST_THRESHOLD # TODO threshold on this
+            shortest_dist = self.DIST_THRESHOLD  # TODO threshold on this
             best_location = None
             for joint, (x, y, conf) in current_keypoints.items():
                 if conf < self.FINGER_CONF:
-                    continue # just skip this one
+                    continue  # just skip this one
                 keypoint_location = np.array([x, y])
-                print("key: {}, value {}".format(joint, (x,y,conf)))
+                print("key: {}, value {}".format(joint, (x, y, conf)))
                 dist = np.linalg.norm(tracker_location - keypoint_location)
                 if dist < shortest_dist:
                     self.best_joint = joint
                     best_location = keypoint_location
                     shortest_dist = dist
-                    self.offset = tracker_location - best_location # TODO determine if this is what we really want
+                    # TODO determine if this is what we really want
+                    self.offset = tracker_location - best_location
 
-            if best_location is not None: # check if this was actually set
+            if best_location is not None:  # check if this was actually set
                 #cv2.circle(frame, tuple([int(x) for x in best_location.tolist()]), 15, (255,255,255), 10)
-                self.was_lost = True # only do this if you find a keypoint
+                self.was_lost = True  # only do this if you find a keypoint
 
-        elif self.tracker.isLost() and self.was_lost: # TODO if it's not there, find another one which is the closest
+        # TODO if it's not there, find another one which is the closest
+        elif self.tracker.isLost() and self.was_lost:
             # update the search region
             # find the best key in the dictionary
-            if self.best_joint in current_keypoints: # this could be none or otherwise not present
-                x_y_conf = current_keypoints[self.best_joint] # the keypoint we were tracking
+            if self.best_joint in current_keypoints:  # this could be none or otherwise not present
+                # the keypoint we were tracking
+                x_y_conf = current_keypoints[self.best_joint]
                 if x_y_conf[2] > self.FINGER_CONF:
                     x_y = x_y_conf[:2]
-                    x_y += self.offset # validate this is the right direction
+                    x_y += self.offset  # validate this is the right direction
                     self.tracker.setSearchLocation(x_y)
-                    # maybe shift it differently if the nearest on isn't present
-
-
+                    # maybe shift it differently if the nearest on isn't
+                    # present
 
         elif not self.tracker.isLost() and not self.was_lost:
             self.offset = None
@@ -118,15 +124,16 @@ class DaSiamShiftSearch():
             self.best_key = None
             self.best_location = None
 
-
     def visualize(self, frame, ltwh, score, keypoint_dict):
         if IMSHOW:
-            frame = self.visualizer.PlotSingleFrameFromAndKeypointDict(frame, keypoint_dict, self.FINGER_CONF)
-            cv2.rectangle(frame, (ltwh[0], ltwh[1]), (ltwh[0] + ltwh[2], ltwh[1] + ltwh[3]), (255,0,0) , 3)
-            cv2.putText(frame, "conf: {:03f}".format(score), (ltwh[0], ltwh[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
+            frame = self.visualizer.PlotSingleFrameFromAndKeypointDict(
+                frame, keypoint_dict, self.FINGER_CONF)
+            cv2.rectangle(
+                frame, (ltwh[0], ltwh[1]), (ltwh[0] + ltwh[2], ltwh[1] + ltwh[3]), (255, 0, 0), 3)
+            cv2.putText(frame, "conf: {:03f}".format(
+                score), (ltwh[0], ltwh[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
             cv2.imshow("predicted location", frame)
             cv2.waitKey(1)
-
 
     def track_section(self, track, vid, outfile, set_search=False,
                       numpy_files=None, vis=False):
@@ -146,20 +153,21 @@ class DaSiamShiftSearch():
         ok, frame = vid.read()
         if not ok:
             raise ValueError("The frame was none")
-        #self.tracker = SiamRPN_tracker.SiamRPN_tracker(frame, initial_bbox)
+        # self.tracker = SiamRPN_tracker.SiamRPN_tracker(frame, initial_bbox)
         self.tracker = SiamMaskWrapper()
         self.tracker.select_region(frame, initial_bbox)
 
         while index <= final_index and ok:  # the current frame
-            #this is where I want to update it to grab the numpy frame
+            # this is where I want to update it to grab the numpy frame
             if set_search and index < len(numpy_files):
                 print(numpy_files[index])
                 keypoints = np.load(numpy_files[index])
                 keypoints_dict = self.convert_numpy(keypoints)
-                self.move_region(keypoints_dict) # TODO check if this is working
+                # TODO check if this is working
+                self.move_region(keypoints_dict)
             else:
                 keypoints_dict = {}
-                if set_search: # clean up
+                if set_search:  # clean up
                     print("Missing numpy file, not setting the search region")
 
             ltwh, score, crop_region = self.tracker.predict(frame)
@@ -168,22 +176,23 @@ class DaSiamShiftSearch():
                 cv2.waitKey(100)
                 self.visualize(frame, ltwh, score, keypoints_dict)
             self.video_writer.write(crop_region)
-            WRITE_ADL=False
+            WRITE_ADL = False
             if WRITE_ADL:
                 tlbr = tools.ltwh_to_tlbr(ltwh)
                 l, t, r, b = tools.tlbr_to_ltrb(tlbr)
                 # TODO validate this line
-                outfile.write("{}, {}, {}, {}, {}, {}, {}, {}\n".format(obj_ID,
-                              l, t, r, b, index, 0, obj_class))
+                outfile.write(
+                    "{}, {}, {}, {}, {}, {}, {}, {}\n".format(
+                        obj_ID, l, t, r, b, index, 0, obj_class))
             else:
                 x, y, w, h = ltwh  # TODO check more
                 #'FrameId', 'Id', 'X', 'Y', 'Width', 'Height', 'Confidence', 'ClassId', 'Visibility'
-                outfile.write("{} {} {} {} {} {} {} {} 1\n".format(index,
-                              obj_ID, x, y, w, h, 1, 1)) # TODO add the class id
+                outfile.write("{} {} {} {} {} {} {} {} 1\n".format(
+                    index, obj_ID, x, y, w, h, 1, 1))  # TODO add the class id
 
             ok, frame = vid.read()
             if frame is None:
-                break # this is just a messier way of doing the while check
+                break  # this is just a messier way of doing the while check
             index += 1
 
     def run_videos(self, start_vid, end_vid, videos_folder=VIDEO_FOLDER,
@@ -208,7 +217,9 @@ class DaSiamShiftSearch():
 
         # create the output folder
         if SET_SHIFT:
-            output_folder = os.path.join(output_folder, "{}_{}_{}".format(SET_SHIFT, self.FINGER_CONF, self.DIST_THRESHOLD))
+            output_folder = os.path.join(
+                output_folder, "{}_{}_{}".format(
+                    SET_SHIFT, self.FINGER_CONF, self.DIST_THRESHOLD))
         if not os.path.isdir(output_folder):
             os.system("mkdir -p {}".format(output_folder))
 
@@ -230,7 +241,7 @@ class DaSiamShiftSearch():
                 raise ValueError("video file form {} did not open".format(
                                  video_file))
             with open(os.path.join(output_folder,
-                      OUTPUT_FORMAT.format(i)), "w") as outfile:
+                                   OUTPUT_FORMAT.format(i)), "w") as outfile:
                 df.sort_values(by=['ID', 'frame'], inplace=True)
 
                 IDs = list(set(df['ID'].tolist()))

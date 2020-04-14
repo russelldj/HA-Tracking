@@ -47,14 +47,14 @@ args = parse_args()
 # iterate over all of the files
 for i in range(args.start, args.stop):
     gt_input_file = os.path.join(args.annotation_folder,
-                                   ADL_FILE_FORMAT.format(i))
+                                 ADL_FILE_FORMAT.format(i))
     # TODO figure out what this is doing
     #pred_in_file = "{}/P_{:02d}.txt".format(PRED_IN, i)
     #pred = load_MOT(pred_in_file)
-    #if REMOVE_IMOVABLE:
+    # if REMOVE_IMOVABLE:
     #    ADL_gt = load_ADL(GT_IN)
     #    gt, pred = remove_imovable_objects(ADL_gt, pred)# TODO filter these again to get only the ones which line up
-    #else:
+    # else:
     gt = ADL_to_MOT(load_ADL(gt_input_file))
     #filtered_pred = remove_intermediate_frames(gt, pred)
     #filtered_pred.to_csv(os.path.join(PRED_OUT, "P_{:02d}.txt".format(i)), sep=" ", header=False, index=False)
