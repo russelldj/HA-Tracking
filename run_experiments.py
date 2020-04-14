@@ -129,7 +129,7 @@ class DaSiamShiftSearch():
 
 
     def track_section(self, track, vid, outfile, set_search=False,
-                      numpy_files=None):
+                      numpy_files=None, vis=False):
         initial_bbox = track.iloc[0][[1, 2, 3, 4]].tolist()
         initial_bbox = tools.ltrb_to_tlbr(initial_bbox)
         initial_bbox = tools.tlbr_to_ltwh(initial_bbox)  # both are needed
@@ -163,18 +163,23 @@ class DaSiamShiftSearch():
                     print("Missing numpy file, not setting the search region")
 
             ltwh, score, crop_region = self.tracker.predict(frame)
-            cv2.imshow("", crop_region)
-            cv2.waitKey(100)
-            self.visualize(frame, ltwh, score, keypoints_dict)
+            if vis:
+                cv2.imshow("", crop_region)
+                cv2.waitKey(100)
+                self.visualize(frame, ltwh, score, keypoints_dict)
+            self.video_writer.write(crop_region)
             WRITE_ADL=False
             if WRITE_ADL:
                 tlbr = tools.ltwh_to_tlbr(ltwh)
                 l, t, r, b = tools.tlbr_to_ltrb(tlbr)
-                outfile.write("{}, {}, {}, {}, {}, {}, {}, {}\n".format(obj_ID, l, t, r, b, index, 0, obj_class)) # TODO validate this line
+                # TODO validate this line
+                outfile.write("{}, {}, {}, {}, {}, {}, {}, {}\n".format(obj_ID,
+                              l, t, r, b, index, 0, obj_class))
             else:
-                x, y, w, h = ltwh # TODO check more
+                x, y, w, h = ltwh  # TODO check more
                 #'FrameId', 'Id', 'X', 'Y', 'Width', 'Height', 'Confidence', 'ClassId', 'Visibility'
-                outfile.write("{} {} {} {} {} {} {} {} 1\n".format(index, obj_ID, x, y, w, h, 1, 1)) # TODO add the class id
+                outfile.write("{} {} {} {} {} {} {} {} 1\n".format(index,
+                              obj_ID, x, y, w, h, 1, 1)) # TODO add the class id
 
             ok, frame = vid.read()
             if frame is None:
@@ -232,7 +237,7 @@ class DaSiamShiftSearch():
                 for ID in IDs:
                     track = df.loc[df['ID'] == ID]
                     self.track_section(track, vid, outfile,
-                                       SET_SHIFT, keypoint_files)
+                                       SET_SHIFT, keypoint_files, vis=False)
 
 
 def parse_args():
@@ -252,9 +257,9 @@ def parse_args():
     parser.add_argument("--video-folder", type=str,
                         help="where to find the ADL videos",
                         default=VIDEO_FOLDER)
-    parser.add_argument("--output_folder", type=str,
+    parser.add_argument("--output-folder", type=str,
                         help="Where to put the visualizations I guess",
-                        default=VIDEO_FOLDER)
+                        default=OUTPUT_FOLDER)
     return parser.parse_args()
 
 
@@ -270,4 +275,4 @@ if __name__ == "__main__":
                                    videos_folder=args.video_folder,
                                    annotations_folder=args.annotation_folder,
                                    keypoints_folder=args.keypoint_folder,
-                                   output_folder=OUTPUT_FOLDER)
+                                   output_folder=args.output_folder)

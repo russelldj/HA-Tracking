@@ -1,7 +1,7 @@
-from HATracking.parse_ADL import *  # fix this
-
+import os
 import argparse
-import pdb
+
+from HATracking.parse_ADL import *  # fix this
 
 WRITE_OUT_GTS = False
 # I'm not sure what this is
