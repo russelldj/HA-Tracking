@@ -65,8 +65,8 @@ string.""", formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('tests', type=str,
                         help='Directory containing tracker result files')
     parser.add_argument('--output-folder', type=str,
-                        help='Where to write the score file',
-                        default=OUTPUT_FOLDER)
+                        help='Where to write the score file, defaults to one level up from the preds',
+                        default=None)
     parser.add_argument('--loglevel', type=str, help='Log level',
                         default='info')
     parser.add_argument('--fmt', type=str, help='Data format',
@@ -150,7 +150,11 @@ def chunk_df(df_dict, chunk_size=10000, verbose=False):
 if __name__ == '__main__':
 
     args = parse_args()
+    if args.output_folder is None:  # no output folder was specified
+        # Take all but the last folder
+        args.output_folder = os.path.join(*os.path.split(args.tests)[:-1])
 
+    # set up logging
     loglevel = getattr(logging, args.loglevel.upper(), None)
     if not isinstance(loglevel, int):
         raise ValueError('Invalid log level: {} '.format(args.loglevel))
@@ -177,23 +181,37 @@ if __name__ == '__main__':
                      min_confidence=1)) for f in gtfiles[:1]])
     ts = OrderedDict([(os.path.splitext(Path(f).parts[-1])[0],
                      mm.io.loadtxt(f, fmt=args.fmt)) for f in tsfiles[:1]])
+
     if args.vis is not None:
-        video_files = sorted(glob.glob(os.path.join(args.video_folder, "*")))
-        # TODO visualize both
-        first_ts = next(iter(ts.values()))  # get the first element
-        first_gt = next(iter(gt.values()))
-        first_video = video_files[0]
-        output_file = "vis_{}.avi".format(args.vis)
-        output_file = os.path.join(args.output_folder, output_file)
-        
-        if args.vis == "both":
-            show_tracks(first_video, output_file, first_ts, first_gt)
-        elif args.vis == "gt":
-            show_tracks(first_video, output_file, first_gt)
-        elif args.vis == "pred":
-            show_tracks(first_video, output_file, first_ts)
-        else:
-            raise ValueError("The vis option {} was not included".format(args.vis))
+        # loop over the shared keys
+        gt_keys = gt.keys()
+        ts_keys = ts.keys()
+        shared_keys = list(gt_keys | ts_keys)
+
+        for key in shared_keys:
+            video_file = "{}.mp4".format(key)
+            video_file = os.path.join(args.video_folder, video_file)
+
+            # TODO clean this up so it's more readable
+            output_folder = "vis_{}.avi".format(args.vis)
+            output_folder = os.path.join(args.output_folder, "vis")
+            os.makedirs(output_folder, exist_ok=True)
+            output_file = "{}_{}.avi".format(key, args.vis)
+            output_file = os.path.join(output_folder, output_file)
+
+            current_ts = ts[key]
+            current_gt = gt[key]
+
+            print("Going to write visualizations to {}".format(output_file))
+
+            if args.vis == "both":
+                show_tracks(video_file, output_file, current_ts, current_gt)
+            elif args.vis == "gt":
+                show_tracks(video_file, output_file, current_gt)
+            elif args.vis == "pred":
+                show_tracks(video_file, output_file, current_ts)
+            else:
+                raise ValueError("The vis option {} was not included".format(args.vis))
 
 
 
