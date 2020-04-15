@@ -49,8 +49,6 @@ def ADL_to_MOT(ADL):
     output["Confidence"] = 1
     output["ClassId"] = 1  # this could be changed
     output["Visibility"] = 1
-    #output.set_index(['FrameId', 'Id'])
-    print(output)
     return output
 
 
@@ -236,18 +234,21 @@ def interpolate_MOT(df, method="cubic"):
     """
     interpolated_tracks = []
 
-    print(df)
     track_IDs = df['Id']
+    original_columns = df.columns
     for track_ID in track_IDs.unique():
         track_inds = (track_IDs == track_ID).values
         one_track = df.iloc[track_inds, :]
-        interpolated_tracks.append(interpolate_track(one_track, method=method))
-    all_tracks = pd.concat(interpolated_tracks)
-    print(all_tracks)
+        interpolated_tracks.append(interpolate_track(one_track, method=method,
+                                                     vis=False))
+    all_tracks = pd.concat(interpolated_tracks, sort=False)
+    all_tracks = all_tracks[original_columns]  # rearange the columns so it's consistent
+    print("The number of rows increased by a factor of {:.2f}".format(len(all_tracks) / len(df)))
     return all_tracks
 
 
-def interpolate_track(track, method="cubic", vis=False):
+def interpolate_track(track, method="cubic", vis=True,
+                      vis_chance=0.01, longest_break=30):
     """
     Interpolate a dataframe containing a single track
 
@@ -257,55 +258,78 @@ def interpolate_track(track, method="cubic", vis=False):
         Interplation method, "linear" or "cubic"
     vis : bool
         Should you plot interpolation
+    longest_break : int
+        The longest gap to be filled with interpolations
     """
+
     # sort the track by frame ID or at least check that that's the case
     if len(track) <= 1:
         return track
 
     frame_Ids = track['FrameId'].values
-    start = np.min(frame_Ids)
-    end = np.max(frame_Ids)
-    # The places we'll interpolate, all the frame values
-    sampling_locations = np.arange(start, end+1)
+    interpolated_dists = np.diff(frame_Ids)
+    long_breaks = interpolated_dists > longest_break
+    if np.any(long_breaks):
+        long_break_locs = np.where(long_breaks)[0]  # TODO see if this can be made more efficient
+        # I'm not entirely sure why there's an off-by-one error since this works for np
+        split_tracks = np.array_split(track, long_break_locs + 1)
+        interpolated_subsections = []
+        for track in split_tracks:
+            interpolated_track = interpolate_track(track,
+                                                   method=method,
+                                                   vis=vis,
+                                                   vis_chance=vis_chance,
+                                                   longest_break=longest_break)
+            interpolated_subsections.append(interpolated_track)
+        concatenated_tracks = pd.concat(interpolated_subsections, sort=False)
+        return concatenated_tracks
 
-    X1 = track['X'].values
-    Y1 = track['Y'].values
-    X2 = X1 + track['Width'].values
-    Y2 = Y1 + track['Height'].values
-    locs = np.vstack((X1, Y1, X2, Y2)).transpose()
-    if method == "linear":
-        f = interpolate.interp1d(frame_Ids, locs)
-    elif method == "cubic":
-        f = interpolate.CubicSpline(frame_Ids, locs)
     else:
-        raise ValueError("Method : {} has not been implmented".format(method))
+        start = np.min(frame_Ids)
+        end = np.max(frame_Ids)
+        # The places we'll interpolate, all the frame values
+        sampling_locations = np.arange(start, end+1)
 
-    interpolated = f(sampling_locations)
-    if vis:
-        for i in range(4):
-            plt.plot(sampling_locations, interpolated[:, i])
-            plt.scatter(frame_Ids, locs[:, i])
-        plt.pause(2)
+        X1 = track['X'].values
+        Y1 = track['Y'].values
+        X2 = X1 + track['Width'].values
+        Y2 = Y1 + track['Height'].values
+        locs = np.vstack((X1, Y1, X2, Y2)).transpose()
+        if method == "linear":
+            f = interpolate.interp1d(frame_Ids, locs)
+        elif method == "cubic":
+            f = interpolate.CubicSpline(frame_Ids, locs)
+        else:
+            raise ValueError("Method : {} has not been implmented".format(method))
 
-    X1 = interpolated[:, 0]
-    Y1 = interpolated[:, 1]
-    W = interpolated[:, 2] - X1
-    H = interpolated[:, 3] - Y1
-    interpolated_track = pd.DataFrame({"X": X1.astype(int),
-                                       "Y": Y1.astype(int),
-                                       "Width": W.astype(int),
-                                       "Height": H.astype(int)})
-    confidence = track.Confidence.unique()
-    class_ID = track.ClassId.unique()
-    visibility = track.Visibility.unique()
-    Id = track.Id.unique()
-    if not (len(confidence) == 1 and len(class_ID) == 1
-            and len(visibility) == 1 and len(Id)):
-        raise ValueError("There is variation in over the course of the track")
-    interpolated_track["Confidence"] = confidence[0]
-    interpolated_track["ClassId"] = class_ID[0]
-    interpolated_track["Visibility"] = visibility[0]
-    interpolated_track["Id"] = Id[0]
-    interpolated_track["Visibility"] = visibility[0]
-    interpolated_track["FrameId"] = sampling_locations
-    return interpolated_track
+        interpolated = f(sampling_locations)
+        if vis and (np.random.rand() < vis_chance):
+            plt.clf()
+            for i in range(4):
+                plt.plot(sampling_locations, interpolated[:, i])
+                plt.scatter(frame_Ids, locs[:, i])
+            plt.legend(["x1", "y1", "x2", "y2"])
+            plt.pause(2)
+
+        X1 = interpolated[:, 0]
+        Y1 = interpolated[:, 1]
+        W = interpolated[:, 2] - X1
+        H = interpolated[:, 3] - Y1
+        interpolated_track = pd.DataFrame({"X": X1.astype(int),
+                                           "Y": Y1.astype(int),
+                                           "Width": W.astype(int),
+                                           "Height": H.astype(int)})
+        confidence = track.Confidence.unique()
+        class_ID = track.ClassId.unique()
+        visibility = track.Visibility.unique()
+        Id = track.Id.unique()
+        if not (len(confidence) == 1 and len(class_ID) == 1
+                and len(visibility) == 1 and len(Id)):
+            raise ValueError("There is variation in over the course of the track")
+        interpolated_track["Confidence"] = confidence[0]
+        interpolated_track["ClassId"] = class_ID[0]
+        interpolated_track["Visibility"] = visibility[0]
+        interpolated_track["Id"] = Id[0]
+        interpolated_track["Visibility"] = visibility[0]
+        interpolated_track["FrameId"] = sampling_locations
+        return interpolated_track

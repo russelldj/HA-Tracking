@@ -16,6 +16,8 @@ import numpy as np
 from collections import OrderedDict
 from pathlib import Path
 
+from HATracking.visualize import show_tracks
+
 OUTPUT_FORMAT_STRING = "MOT_summary_{}_{}.txt"
 OUTPUT_FOLDER = "data/ADL/py_mot_metric_scores"
 FRAMES_PER_CHUNK = 10000
@@ -72,7 +74,12 @@ string.""", formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--solver', type=str, help='LAP solver to use')
     parser.add_argument('--frames-per-chunk', default=FRAMES_PER_CHUNK,
                         type=int, help='The number of frames per chunk')
+    parser.add_argument('--vis', type=str, default=None,
+                        help="visualize tracks. Options are 'gt', 'pred', 'both'. No input will result in no visualization")
+    parser.add_argument('--video-folder', type=str,
+                        help='The folder containing the ADL videos')
     return parser.parse_args()
+
 
 def compare_dataframes(gts, ts):
     accs = []
@@ -86,6 +93,7 @@ def compare_dataframes(gts, ts):
             logging.warning('No ground truth for {}, skipping.'.format(k))
 
     return accs, names
+
 
 def ADL_scorer(args):
     gtfiles = sorted(glob.glob(os.path.join(args.groundtruths, '*')))
@@ -156,17 +164,39 @@ if __name__ == '__main__':
     gtfiles = sorted(glob.glob(os.path.join(args.groundtruths, '*/gt/gt.txt')))
     tsfiles = sorted([f for f in glob.glob(os.path.join(args.tests, '*.txt'))
                      if not os.path.basename(f).startswith('eval')])
+
     logging.info('Found {} groundtruths and {} test files.'.format(len(gtfiles), len(tsfiles)))
     logging.info('Available LAP solvers {}'.format(mm.lap.available_solvers))
     logging.info('Default LAP solver \'{}\''.format(mm.lap.default_solver))
     logging.info('Loading files.')
     print("GT files: {}\n TS files: {} ".format(gtfiles, tsfiles))
+
     mm.io.loadtxt(tsfiles[0], fmt=args.fmt)
 
     gt = OrderedDict([(Path(f).parts[-3], mm.io.loadtxt(f, fmt=args.fmt,
-                     min_confidence=1)) for f in gtfiles])
+                     min_confidence=1)) for f in gtfiles[:1]])
     ts = OrderedDict([(os.path.splitext(Path(f).parts[-1])[0],
-                     mm.io.loadtxt(f, fmt=args.fmt)) for f in tsfiles])
+                     mm.io.loadtxt(f, fmt=args.fmt)) for f in tsfiles[:1]])
+    if args.vis is not None:
+        video_files = sorted(glob.glob(os.path.join(args.video_folder, "*")))
+        # TODO visualize both
+        first_ts = next(iter(ts.values()))  # get the first element
+        first_gt = next(iter(gt.values()))
+        first_video = video_files[0]
+        output_file = "vis_{}.avi".format(args.vis)
+        output_file = os.path.join(args.output_folder, output_file)
+        
+        if args.vis == "both":
+            show_tracks(first_video, output_file, first_ts, first_gt)
+        elif args.vis == "gt":
+            show_tracks(first_video, output_file, first_gt)
+        elif args.vis == "pred":
+            show_tracks(first_video, output_file, first_ts)
+        else:
+            raise ValueError("The vis option {} was not included".format(args.vis))
+
+
+
     new_ts = chunk_df(ts)
     new_gt = chunk_df(gt)
     NUM_ROWS = 600000
@@ -175,14 +205,6 @@ if __name__ == '__main__':
     print("new GT keys: {}\n new TS keys: {}".format(new_gt.keys(), new_ts.keys()))
     # compute the metrics
 
-    # Test
-    #first_gt = gt["P_01"].astype(np.int64)
-    #first_ts = ts["P_01"].astype(np.int64)
-    #first_gt.index.union(first_gt.index)
-    #pdb.set_trace()
-    #print(first_gt.index)
-    #first_gt.index.union(first_ts.index[:2000])
-    #print(first_gt.index)
     mh = mm.metrics.create()
     accs, names = compare_dataframes(new_gt, new_ts)
     logging.info('Running metrics')

@@ -14,3 +14,4 @@ Download the data from: https://www.csee.umbc.edu/~hpirsiav/papers/ADLdataset/
 
 # Dependancies
  pip install pymotmetrics
+ pip install git+https://github.com/nwojke/pymotutils

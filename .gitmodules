@@ -16,3 +16,6 @@
 [submodule "TTM/libs/SiamMask"]
 	path = HATracking/libs/SiamMask
 	url = git@github.com:russelldj/SiamMask.git
+[submodule "HATracking/libs/pymotutils"]
+	path = HATracking/libs/pymotutils
+	url = git@github.com:nwojke/pymotutils.git

@@ -1,6 +1,7 @@
 import os
 import argparse
 
+from HATracking.parse_ADL import interpolate_MOT
 from HATracking.parse_ADL import *  # fix this
 
 WRITE_OUT_GTS = False
@@ -39,6 +40,9 @@ def parse_args():
     parser.add_argument("--output-folder", type=str,
                         help="Where to write out the reformated annotations",
                         default=GT_OUTPUT_FOLDER)
+    parser.add_argument("--interpolate", type=str,
+                        help="The type of interpoltation, 'linear' or 'cubic'. If not specified, no interpolation will be performed",
+                        default=None)
     return parser.parse_args()
 
 
@@ -56,6 +60,8 @@ for i in range(args.start, args.stop):
     #    gt, pred = remove_imovable_objects(ADL_gt, pred)# TODO filter these again to get only the ones which line up
     # else:
     gt = ADL_to_MOT(load_ADL(gt_input_file))
+    if args.interpolate is not None:
+        gt = interpolate_MOT(gt, method=args.interpolate)
     #filtered_pred = remove_intermediate_frames(gt, pred)
     #filtered_pred.to_csv(os.path.join(PRED_OUT, "P_{:02d}.txt".format(i)), sep=" ", header=False, index=False)
     gt_folder = os.path.join(args.output_folder, GT_FORMAT.format(i))
