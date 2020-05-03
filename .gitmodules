@@ -19,3 +19,6 @@
 [submodule "HATracking/libs/pymotutils"]
 	path = HATracking/libs/pymotutils
 	url = git@github.com:nwojke/pymotutils.git
+[submodule "HATracking/libs/MultiHand-Tracking"]
+	path = HATracking/libs/MultiHand-Tracking
+	url = git@github.com:JuliaPoo/MultiHand-Tracking.git

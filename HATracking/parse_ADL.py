@@ -5,6 +5,8 @@ import numpy as np
 from scipy import interpolate
 import matplotlib.pyplot as plt
 
+from .helpers import unique_output_filename
+
 
 def load_ADL(fname):
     df = pd.read_csv(
@@ -242,13 +244,15 @@ def interpolate_MOT(df, method="cubic"):
         interpolated_tracks.append(interpolate_track(one_track, method=method,
                                                      vis=False))
     all_tracks = pd.concat(interpolated_tracks, sort=False)
-    all_tracks = all_tracks[original_columns]  # rearange the columns so it's consistent
-    print("The number of rows increased by a factor of {:.2f}".format(len(all_tracks) / len(df)))
+    # rearange the columns so it's consistent
+    all_tracks = all_tracks[original_columns]
+    print("The number of rows increased by a factor of {:.2f}".format(
+        len(all_tracks) / len(df)))
     return all_tracks
 
 
 def interpolate_track(track, method="cubic", vis=True,
-                      vis_chance=0.01, longest_break=30):
+                      vis_chance=0.01, longest_break=30, output_folder="data/vis/interpolation"):
     """
     Interpolate a dataframe containing a single track
 
@@ -260,6 +264,8 @@ def interpolate_track(track, method="cubic", vis=True,
         Should you plot interpolation
     longest_break : int
         The longest gap to be filled with interpolations
+    output_folder : str
+        Where to write the visualizations
     """
 
     # sort the track by frame ID or at least check that that's the case
@@ -270,7 +276,8 @@ def interpolate_track(track, method="cubic", vis=True,
     interpolated_dists = np.diff(frame_Ids)
     long_breaks = interpolated_dists > longest_break
     if np.any(long_breaks):
-        long_break_locs = np.where(long_breaks)[0]  # TODO see if this can be made more efficient
+        # TODO see if this can be made more efficient
+        long_break_locs = np.where(long_breaks)[0]
         # I'm not entirely sure why there's an off-by-one error since this works for np
         split_tracks = np.array_split(track, long_break_locs + 1)
         interpolated_subsections = []
@@ -296,20 +303,28 @@ def interpolate_track(track, method="cubic", vis=True,
         Y2 = Y1 + track['Height'].values
         locs = np.vstack((X1, Y1, X2, Y2)).transpose()
         if method == "linear":
-            f = interpolate.interp1d(frame_Ids, locs)
+            f = interpolate.interp1d(frame_Ids, locs, axis=0)
         elif method == "cubic":
             f = interpolate.CubicSpline(frame_Ids, locs)
         else:
-            raise ValueError("Method : {} has not been implmented".format(method))
+            raise ValueError(
+                "Method : {} has not been implmented".format(method))
 
         interpolated = f(sampling_locations)
-        if vis and (np.random.rand() < vis_chance):
+        if (np.random.rand() < vis_chance):
             plt.clf()
             for i in range(4):
                 plt.plot(sampling_locations, interpolated[:, i])
                 plt.scatter(frame_Ids, locs[:, i])
             plt.legend(["x1", "y1", "x2", "y2"])
-            plt.pause(2)
+            plt.xlabel("Frame number")
+            plt.ylabel("Pixel location")
+            format_str = method + "_interpolation_{:03d}.png"
+            vis_filename = unique_output_filename(output_folder, format_str)
+            if vis:
+                plt.pause(2)
+            else:
+                plt.savefig(vis_filename)
 
         X1 = interpolated[:, 0]
         Y1 = interpolated[:, 1]
@@ -325,7 +340,8 @@ def interpolate_track(track, method="cubic", vis=True,
         Id = track.Id.unique()
         if not (len(confidence) == 1 and len(class_ID) == 1
                 and len(visibility) == 1 and len(Id)):
-            raise ValueError("There is variation in over the course of the track")
+            raise ValueError(
+                "There is variation in over the course of the track")
         interpolated_track["Confidence"] = confidence[0]
         interpolated_track["ClassId"] = class_ID[0]
         interpolated_track["Visibility"] = visibility[0]

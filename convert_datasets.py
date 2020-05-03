@@ -6,11 +6,10 @@ from HATracking.parse_ADL import *  # fix this
 
 WRITE_OUT_GTS = False
 # I'm not sure what this is
-PRED_IN = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/scaled_right/unshifted"
+PRED_IN = "data/ADL/outputs/experiments/first_run_no_shift/preds"
+GT_OUTPUT_FOLDER = "data/ADL/annotations/MOT_style"
 
-GT_OUTPUT_FOLDER = "/usr0/home/drussel1/dev/TTM/TTM/data/CVPR/ground_truths/movable"
-
-ADL_OBJECT_ANNOTATIONS_FOLDER = "/home/drussel1/data/ADL/ADL_annotations/just_object_annotations"
+ADL_OBJECT_ANNOTATIONS_FOLDER = "data/ADL/annotations/object_annotation"
 ADL_FILE_FORMAT = "object_annot_P_{:02d}.txt"
 GT_FORMAT = "P_{:02d}/gt/"
 
@@ -22,8 +21,6 @@ else:
     PRED_OUT = "{}_filtered".format(PRED_IN)
 
 # make the output directory
-if not os.path.isdir(PRED_OUT):
-    os.system("mkdir -p {}".format(PRED_OUT))
 
 
 def parse_args():
@@ -43,6 +40,9 @@ def parse_args():
     parser.add_argument("--interpolate", type=str,
                         help="The type of interpoltation, 'linear' or 'cubic'. If not specified, no interpolation will be performed",
                         default=None)
+    parser.add_argument("--remove-imovable", action="store_true",
+                        help="Remove objects which cannot be moved. Currently DOES NOTHING")
+
     return parser.parse_args()
 
 
@@ -64,9 +64,10 @@ for i in range(args.start, args.stop):
         gt = interpolate_MOT(gt, method=args.interpolate)
     #filtered_pred = remove_intermediate_frames(gt, pred)
     #filtered_pred.to_csv(os.path.join(PRED_OUT, "P_{:02d}.txt".format(i)), sep=" ", header=False, index=False)
-    gt_folder = os.path.join(args.output_folder, GT_FORMAT.format(i))
-    if not os.path.isdir(gt_folder):
-        os.system("mkdir -p {}".format(gt_folder))
-    gt_file = os.path.join(gt_folder, "gt.txt")
+    gt_output_folder = os.path.join(
+        args.output_folder, GT_FORMAT.format(i))
+    if not os.path.isdir(gt_output_folder):
+        os.system("mkdir -p {}".format(gt_output_folder))
+    gt_file = os.path.join(gt_output_folder, "gt.txt")
     # don't write a header or index column
     gt.to_csv(gt_file, sep=" ", header=False, index=False)
